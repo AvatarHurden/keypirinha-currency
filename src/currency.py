@@ -292,7 +292,7 @@ class Currency(kp.Plugin):
 
             # match: <amount> [[from_cur]:[to_cur]]
             m = re.match(
-                (r"^(?P<amount>\d*)?\s*" +
+                (r"^(?P<amount>\d*([,.]\d+)?)?\s*" +
                     r"(?P<from_cur>[a-zA-Z\-]{3})?\s*" +
                     r"(( to | in |:)\s*(?P<to_cur>[a-zA-Z\-]{3}))?$"),
                 user_input)
@@ -306,7 +306,7 @@ class Currency(kp.Plugin):
                     if to_cur:
                         query['to_cur'] = to_cur
                 if m.group("amount"):
-                    query['amount'] = int(m.group("amount").rstrip())
+                    query['amount'] = float(m.group("amount").rstrip().replace(',', '.'))
 
         return query
 
@@ -328,17 +328,12 @@ class Currency(kp.Plugin):
         return url
 
     def _parse_api_response(self, response, query):
-        # example:
-        # * https://translate.google.com/translate_a/single?client=gtx&hl=en&sl=auto&ssel=0&tl=en&tsel=0&q=meilleur+definition&ie=UTF-8&oe=UTF-8&otf=0&dt=t
-        #   [[["Best definition","meilleur definition",,,3]],,"fr",,,,0.34457824,,[["fr"],,[0.34457824],["fr"]]]
-        # * https://translate.google.com/translate_a/single?client=gtx&hl=en&sl=auto&ssel=0&tl=en&tsel=0&q=meilleur+definition&ie=UTF-8&oe=UTF-8&otf=0&dt=at
-        #   [,,"fr",,,[["meilleur definition",,[["Best definition",0,true,false],["better definition",0,true,false]],[[0,19]],"meilleur definition",0,0]],0.34457824,,[["fr"],,[0.34457824],["fr"]]]
-        #self.err(response)
-
         json_root = json.loads(response)
         result = json_root['query']['results']['rate']
 
-        ret = str(float(result['Rate']) * query['amount']) + ' ' + query['to_cur']
+        amount = float(result['Rate']) * query['amount']
+
+        ret = '{0:.2f}'.format(amount) + ' ' + query['to_cur']
 
         return [ret]
 

@@ -23,10 +23,14 @@ move it to the `InstalledPackage` folder located at:
 
 ## Usage
 
+A ```Convert Currency``` item is inserted into the catalog with conversion from USD to BRL.
+Select this item to enter conversion mode.
+
 Enter the amount to convert, the source currency code and the destination currency code.
+If either the source and destination currency is omitted, the defaults are used.
 If the amount is omitted, the current exchange rate is shown.
 
-Currency allows the source and destination currencies to be separated by any of the following:
+*Currency* allows the source and destination currencies to be separated by any of the following:
  - in
  - to
  - :
@@ -39,6 +43,10 @@ This means that all of the following are allowed:
 
 ## Change Log
 
+### v1.1
+
+* Allow decimal amounts to be inserted (using either a comma or a period)
+* Result formatted to 2 decimal places
 
 ### v1.0
 
