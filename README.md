@@ -47,6 +47,7 @@ This means that all of the following are allowed:
 
 * Allow decimal amounts to be inserted (using either a comma or a period)
 * Result formatted to 2 decimal places
+* Added copy actions
 
 ### v1.0
 

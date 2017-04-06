@@ -210,11 +210,25 @@ class Currency(kp.Plugin):
     ITEMCAT_CONVERT = kp.ItemCategory.USER_BASE + 1
     ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 2
 
+    ACTION_COPY_RESULT = 'copy_result'
+    ACTION_COPY_AMOUNT = 'copy_amount'
+
     def __init__(self):
         super().__init__()
 
     def on_start(self):
-        pass
+
+        actions = [
+            self.create_action(
+                name=self.ACTION_COPY_AMOUNT,
+                label="Copy result",
+                short_desc="Copy the result to clipboard"),
+            self.create_action(
+                name=self.ACTION_COPY_RESULT,
+                label="Copy result with code",
+                short_desc="Copy result (with code) to clipboard")]
+
+        self.set_actions(self.ITEMCAT_RESULT, actions)
 
     def on_catalog(self):
         self.set_catalog([self._create_translate_item(
@@ -266,7 +280,17 @@ class Currency(kp.Plugin):
         #     self.set_suggestions(suggestions)
 
     def on_execute(self, item, action):
-        pass
+        if item.category() != self.ITEMCAT_RESULT:
+            return
+
+        # browse or copy url
+        if action and action.name() == self.ACTION_COPY_AMOUNT:
+            amount = item.data_bag()[:-4]
+
+            kpu.set_clipboard(amount)
+        # default action: copy result (ACTION_COPY_RESULT)
+        else:
+            kpu.set_clipboard(item.data_bag())
 
     def on_activated(self):
         pass
@@ -290,7 +314,6 @@ class Currency(kp.Plugin):
             user_input = user_input.lstrip()
             query['terms'] = user_input.rstrip()
 
-            # match: <amount> [[from_cur]:[to_cur]]
             m = re.match(
                 (r"^(?P<amount>\d*([,.]\d+)?)?\s*" +
                     r"(?P<from_cur>[a-zA-Z\-]{3})?\s*" +
@@ -353,4 +376,5 @@ class Currency(kp.Plugin):
             short_desc=short_desc,
             target=target,
             args_hint=kp.ItemArgsHint.REQUIRED,
-            hit_hint=kp.ItemHitHint.NOARGS)
+            hit_hint=kp.ItemHitHint.NOARGS,
+            data_bag=label)
