@@ -210,6 +210,18 @@ class Currency(kp.Plugin):
     ITEMCAT_CONVERT = kp.ItemCategory.USER_BASE + 1
     ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 2
 
+    DEFAULT_SECTION = 'defaults'
+
+    DEFAULT_ITEM_ENABLED = True
+    DEFAULT_ITEM_LABEL = 'Convert Currency'
+    DEFAULT_CUR_IN = 'USD'
+    DEFAULT_CUR_OUT = 'BRL'
+
+    default_item_enabled = DEFAULT_ITEM_ENABLED
+    default_item_label = DEFAULT_ITEM_LABEL
+    default_cur_in = DEFAULT_CUR_IN
+    default_cur_out = DEFAULT_CUR_OUT
+
     ACTION_COPY_RESULT = 'copy_result'
     ACTION_COPY_AMOUNT = 'copy_amount'
 
@@ -217,6 +229,7 @@ class Currency(kp.Plugin):
         super().__init__()
 
     def on_start(self):
+        self._read_config()
 
         actions = [
             self.create_action(
@@ -231,9 +244,11 @@ class Currency(kp.Plugin):
         self.set_actions(self.ITEMCAT_RESULT, actions)
 
     def on_catalog(self):
-        self.set_catalog([self._create_translate_item(
-            label="Convert Currency...",
-            short_desc="Convert values between currencies")])
+        catalog = []
+        if self.default_item_enabled:
+            catalog.append(self._create_translate_item(
+                label=self.default_item_label))
+        self.set_catalog(catalog)
 
     def on_suggest(self, user_input, items_chain):
         if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
@@ -270,8 +285,6 @@ class Currency(kp.Plugin):
             label=user_input,
             short_desc="Error: " + str(exc)))
 
-
-        print(suggestions)
         self.set_suggestions(suggestions, kp.Match.ANY, kp.Sort.NONE)
         # else
         #     suggestions = [self._create_keyword_item(
@@ -299,12 +312,15 @@ class Currency(kp.Plugin):
         pass
 
     def on_events(self, flags):
-        pass
+        if flags & (kp.Events.APPCONFIG | kp.Events.PACKCONFIG |
+                    kp.Events.NETOPTIONS):
+            self._read_config()
+            self.on_catalog()
 
     def _parse_and_merge_input(self, user_input=None):
         query = {
-            'from_cur': 'USD',
-            'to_cur': 'BRL',
+            'from_cur': self.default_cur_in,
+            'to_cur': self.default_cur_out,
             'amount': 1}
 
         # parse user input
@@ -356,15 +372,18 @@ class Currency(kp.Plugin):
 
         amount = float(result['Rate']) * query['amount']
 
-        ret = '{0:.2f}'.format(amount) + ' ' + query['to_cur']
+        ret = '{0:.15f}'.format(amount).rstrip('0').rstrip('.') + ' ' + query['to_cur']
 
         return [ret]
 
-    def _create_translate_item(self, label, short_desc):
+    def _create_translate_item(self, label):
+
+        desc = 'Convert from {} to {}'.format(self.default_cur_in, self.default_cur_out)
+
         return self.create_item(
             category=self.ITEMCAT_CONVERT,
             label=label,
-            short_desc=short_desc,
+            short_desc=desc,
             target="convertcurrency",
             args_hint=kp.ItemArgsHint.REQUIRED,
             hit_hint=kp.ItemHitHint.NOARGS)
@@ -378,3 +397,48 @@ class Currency(kp.Plugin):
             args_hint=kp.ItemArgsHint.REQUIRED,
             hit_hint=kp.ItemHitHint.NOARGS,
             data_bag=label)
+
+    def _read_config(self):
+        def _warn_cur_code(name, fallback):
+            fmt = (
+                "Invalid {} value in config. " +
+                "Falling back to default: {}")
+            self.warn(fmt.format(name, fallback))
+
+        settings = self.load_settings()
+
+        # [default_item]
+        self.default_item_enabled = settings.get_bool(
+            "enable",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_ITEM_ENABLED)
+        self.default_item_label = settings.get_stripped(
+            "item_label",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_ITEM_LABEL)
+
+        # default input currency
+        input_code = settings.get_stripped(
+            "input_cur",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_CUR_IN)
+        validated_input_code = self._match_cur_code(input_code)
+
+        if validated_input_code is None:
+            _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
+            self.default_cur_in = self.DEFAULT_CUR_IN
+        else:
+            self.default_cur_in = validated_input_code
+
+        # default output currency
+        output_code = settings.get_stripped(
+            "output_cur",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_CUR_OUT)
+        validated_output_code = self._match_cur_code(output_code)
+
+        if validated_output_code is None:
+            _warn_cur_code("output_cur", self.DEFAULT_CUR_OUT)
+            self.default_cur_out = self.DEFAULT_CUR_OUT
+        else:
+            self.default_cur_out = validated_output_code

@@ -46,8 +46,8 @@ This means that all of the following are allowed:
 ### v1.1
 
 * Allow decimal amounts to be inserted (using either a comma or a period)
-* Result formatted to 2 decimal places
 * Added copy actions
+* Added configuration for default currencies
 
 ### v1.0
 
