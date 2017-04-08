@@ -5,8 +5,6 @@ This is Currency, a currency converter plugin for the
 
 ## Download
 
-**TODO:** indicate where the latest `.keypirinha-package` file can be
-downloaded. For example a URL to the `releases` list like:
 https://github.com/AvatarHurden/keypirinha-currency/releases
 
 
@@ -35,11 +33,14 @@ If the amount is omitted, the current exchange rate is shown.
  - to
  - :
 
+To convert between multiple currencies at the same time, separate each one by a comma.
+This can be done in either the source or destination field, and all combinations will be displayed in the results.
+
 This means that all of the following are allowed:
 
-- 5 usd in inr
+- 5 usd in inr,JPY
 - EUR to JPY
-- 10 brl:EUR
+- 10 brl,usd:EUR,gbp
 
 ## Change Log
 
@@ -48,6 +49,7 @@ This means that all of the following are allowed:
 * Allow decimal amounts to be inserted (using either a comma or a period)
 * Added copy actions
 * Added configuration for default currencies
+* Multiple source and destination currencies can be specified
 
 ### v1.0
 

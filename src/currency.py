@@ -215,7 +215,7 @@ class Currency(kp.Plugin):
     DEFAULT_ITEM_ENABLED = True
     DEFAULT_ITEM_LABEL = 'Convert Currency'
     DEFAULT_CUR_IN = 'USD'
-    DEFAULT_CUR_OUT = 'BRL'
+    DEFAULT_CUR_OUT = 'EUR, GBP'
 
     default_item_enabled = DEFAULT_ITEM_ENABLED
     default_item_label = DEFAULT_ITEM_LABEL
@@ -274,11 +274,11 @@ class Currency(kp.Plugin):
             # parse response from the api
             results = self._parse_api_response(response, query)
 
-            for res in results:
+            for (label, source, dest) in results:
                 suggestions.append(self._create_result_item(
-                    label=res,
-                    short_desc= query['from_cur'] + ' to ' + query['to_cur'],
-                    target=user_input
+                    label=label,
+                    short_desc= source + ' to ' + dest,
+                    target=label
                 ))
         except Exception as exc:
             suggestions.append(self.create_error_item(
@@ -330,10 +330,12 @@ class Currency(kp.Plugin):
             user_input = user_input.lstrip()
             query['terms'] = user_input.rstrip()
 
+            symbolRegex = r'[a-zA-Z]{3}(,\s*[a-zA-Z]{3})*'
+
             m = re.match(
                 (r"^(?P<amount>\d*([,.]\d+)?)?\s*" +
-                    r"(?P<from_cur>[a-zA-Z\-]{3})?\s*" +
-                    r"(( to | in |:)\s*(?P<to_cur>[a-zA-Z\-]{3}))?$"),
+                    r"(?P<from_cur>" + symbolRegex + ")?\s*" +
+                    r"(( to | in |:)\s*(?P<to_cur>" + symbolRegex +"))?$"),
                 user_input)
 
             if m:
@@ -346,39 +348,51 @@ class Currency(kp.Plugin):
                         query['to_cur'] = to_cur
                 if m.group("amount"):
                     query['amount'] = float(m.group("amount").rstrip().replace(',', '.'))
-
         return query
 
-    def _match_cur_code(self, code):
-        if not code:
-            return None
-        for key in self.currencies:
-            if code.upper() == key:
-                return key
-        return None
+    def _match_cur_code(self, codes):
+        if not codes:
+            return []
+        lst = [x.strip() for x in codes.split(',')]
+        return [x.upper() for x in lst if x.upper() in self.currencies]
 
     def _build_api_url(self, from_cur, to_cur, amount):
         url = self.API_URL + '?'
-        url = url + 'q=' + urllib.parse.quote('select * from yahoo.finance.xchange where pair in ("')
-        url = url + urllib.parse.quote(from_cur + to_cur)
-        url = url + urllib.parse.quote('")') + '&'
+        url = url + 'q=' + urllib.parse.quote('select * from yahoo.finance.xchange where pair in (')
+        pairs = []
+        for source in from_cur:
+            for out in to_cur:
+                pairs.append(urllib.parse.quote('"' + source + out + '"'))
+        url = url + ','.join(pairs)
+        url = url + urllib.parse.quote(')') + '&'
         url = url + 'format=json' + '&'
         url = url + 'env=' + urllib.parse.quote('store://datatables.org/alltableswithkeys')
         return url
 
     def _parse_api_response(self, response, query):
         json_root = json.loads(response)
-        result = json_root['query']['results']['rate']
+        isList = json_root['query']['count'] != 1
+        results = json_root['query']['results']['rate']
+        if not isList:
+            results = [results]
+        ret = []
+        for result in results:
+            amount = float(result['Rate']) * query['amount']
 
-        amount = float(result['Rate']) * query['amount']
+            source, dest = result['Name'].split('/')
+            ret.append(('{0:.8f}'.format(amount).rstrip('0').rstrip('.') + ' ' + dest, source, dest))
 
-        ret = '{0:.15f}'.format(amount).rstrip('0').rstrip('.') + ' ' + query['to_cur']
-
-        return [ret]
+        return ret
 
     def _create_translate_item(self, label):
 
-        desc = 'Convert from {} to {}'.format(self.default_cur_in, self.default_cur_out)
+        def joinCur(lst):
+            if len(lst) == 1:
+                return lst[0]
+            else:
+                return ', '.join(lst[:-1]) + ' and ' + lst[-1]
+
+        desc = 'Convert from {} to {}'.format(joinCur(self.default_cur_in), joinCur(self.default_cur_out))
 
         return self.create_item(
             category=self.ITEMCAT_CONVERT,
@@ -424,7 +438,7 @@ class Currency(kp.Plugin):
             fallback=self.DEFAULT_CUR_IN)
         validated_input_code = self._match_cur_code(input_code)
 
-        if validated_input_code is None:
+        if validated_input_code is []:
             _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
             self.default_cur_in = self.DEFAULT_CUR_IN
         else:
