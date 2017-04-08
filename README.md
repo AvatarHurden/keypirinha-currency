@@ -5,8 +5,6 @@ This is Currency, a currency converter plugin for the
 
 ## Download
 
-**TODO:** indicate where the latest `.keypirinha-package` file can be
-downloaded. For example a URL to the `releases` list like:
 https://github.com/AvatarHurden/keypirinha-currency/releases
 
 
@@ -23,22 +21,35 @@ move it to the `InstalledPackage` folder located at:
 
 ## Usage
 
+A ```Convert Currency``` item is inserted into the catalog with conversion from USD to BRL.
+Select this item to enter conversion mode.
+
 Enter the amount to convert, the source currency code and the destination currency code.
+If either the source and destination currency is omitted, the defaults are used.
 If the amount is omitted, the current exchange rate is shown.
 
-Currency allows the source and destination currencies to be separated by any of the following:
+*Currency* allows the source and destination currencies to be separated by any of the following:
  - in
  - to
  - :
 
+To convert between multiple currencies at the same time, separate each one by a comma.
+This can be done in either the source or destination field, and all combinations will be displayed in the results.
+
 This means that all of the following are allowed:
 
-- 5 usd in inr
+- 5 usd in inr,JPY
 - EUR to JPY
-- 10 brl:EUR
+- 10 brl,usd:EUR,gbp
 
 ## Change Log
 
+### v1.1
+
+* Allow decimal amounts to be inserted (using either a comma or a period)
+* Added copy actions
+* Added configuration for default currencies
+* Multiple source and destination currencies can be specified
 
 ### v1.0
 

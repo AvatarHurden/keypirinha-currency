@@ -210,16 +210,45 @@ class Currency(kp.Plugin):
     ITEMCAT_CONVERT = kp.ItemCategory.USER_BASE + 1
     ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 2
 
+    DEFAULT_SECTION = 'defaults'
+
+    DEFAULT_ITEM_ENABLED = True
+    DEFAULT_ITEM_LABEL = 'Convert Currency'
+    DEFAULT_CUR_IN = 'USD'
+    DEFAULT_CUR_OUT = 'EUR, GBP'
+
+    default_item_enabled = DEFAULT_ITEM_ENABLED
+    default_item_label = DEFAULT_ITEM_LABEL
+    default_cur_in = DEFAULT_CUR_IN
+    default_cur_out = DEFAULT_CUR_OUT
+
+    ACTION_COPY_RESULT = 'copy_result'
+    ACTION_COPY_AMOUNT = 'copy_amount'
+
     def __init__(self):
         super().__init__()
 
     def on_start(self):
-        pass
+        self._read_config()
+
+        actions = [
+            self.create_action(
+                name=self.ACTION_COPY_AMOUNT,
+                label="Copy result",
+                short_desc="Copy the result to clipboard"),
+            self.create_action(
+                name=self.ACTION_COPY_RESULT,
+                label="Copy result with code",
+                short_desc="Copy result (with code) to clipboard")]
+
+        self.set_actions(self.ITEMCAT_RESULT, actions)
 
     def on_catalog(self):
-        self.set_catalog([self._create_translate_item(
-            label="Convert Currency...",
-            short_desc="Convert values between currencies")])
+        catalog = []
+        if self.default_item_enabled:
+            catalog.append(self._create_translate_item(
+                label=self.default_item_label))
+        self.set_catalog(catalog)
 
     def on_suggest(self, user_input, items_chain):
         if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
@@ -245,19 +274,17 @@ class Currency(kp.Plugin):
             # parse response from the api
             results = self._parse_api_response(response, query)
 
-            for res in results:
+            for (label, source, dest) in results:
                 suggestions.append(self._create_result_item(
-                    label=res,
-                    short_desc= query['from_cur'] + ' to ' + query['to_cur'],
-                    target=user_input
+                    label=label,
+                    short_desc= source + ' to ' + dest,
+                    target=label
                 ))
         except Exception as exc:
             suggestions.append(self.create_error_item(
             label=user_input,
             short_desc="Error: " + str(exc)))
 
-
-        print(suggestions)
         self.set_suggestions(suggestions, kp.Match.ANY, kp.Sort.NONE)
         # else
         #     suggestions = [self._create_keyword_item(
@@ -266,7 +293,17 @@ class Currency(kp.Plugin):
         #     self.set_suggestions(suggestions)
 
     def on_execute(self, item, action):
-        pass
+        if item.category() != self.ITEMCAT_RESULT:
+            return
+
+        # browse or copy url
+        if action and action.name() == self.ACTION_COPY_AMOUNT:
+            amount = item.data_bag()[:-4]
+
+            kpu.set_clipboard(amount)
+        # default action: copy result (ACTION_COPY_RESULT)
+        else:
+            kpu.set_clipboard(item.data_bag())
 
     def on_activated(self):
         pass
@@ -275,12 +312,15 @@ class Currency(kp.Plugin):
         pass
 
     def on_events(self, flags):
-        pass
+        if flags & (kp.Events.APPCONFIG | kp.Events.PACKCONFIG |
+                    kp.Events.NETOPTIONS):
+            self._read_config()
+            self.on_catalog()
 
     def _parse_and_merge_input(self, user_input=None):
         query = {
-            'from_cur': 'USD',
-            'to_cur': 'BRL',
+            'from_cur': self.default_cur_in,
+            'to_cur': self.default_cur_out,
             'amount': 1}
 
         # parse user input
@@ -290,11 +330,12 @@ class Currency(kp.Plugin):
             user_input = user_input.lstrip()
             query['terms'] = user_input.rstrip()
 
-            # match: <amount> [[from_cur]:[to_cur]]
+            symbolRegex = r'[a-zA-Z]{3}(,\s*[a-zA-Z]{3})*'
+
             m = re.match(
-                (r"^(?P<amount>\d*)?\s*" +
-                    r"(?P<from_cur>[a-zA-Z\-]{3})?\s*" +
-                    r"(( to | in |:)\s*(?P<to_cur>[a-zA-Z\-]{3}))?$"),
+                (r"^(?P<amount>\d*([,.]\d+)?)?\s*" +
+                    r"(?P<from_cur>" + symbolRegex + ")?\s*" +
+                    r"(( to | in |:)\s*(?P<to_cur>" + symbolRegex +"))?$"),
                 user_input)
 
             if m:
@@ -306,47 +347,57 @@ class Currency(kp.Plugin):
                     if to_cur:
                         query['to_cur'] = to_cur
                 if m.group("amount"):
-                    query['amount'] = int(m.group("amount").rstrip())
-
+                    query['amount'] = float(m.group("amount").rstrip().replace(',', '.'))
         return query
 
-    def _match_cur_code(self, code):
-        if not code:
-            return None
-        for key in self.currencies:
-            if code.upper() == key:
-                return key
-        return None
+    def _match_cur_code(self, codes):
+        if not codes:
+            return []
+        lst = [x.strip() for x in codes.split(',')]
+        return [x.upper() for x in lst if x.upper() in self.currencies]
 
     def _build_api_url(self, from_cur, to_cur, amount):
         url = self.API_URL + '?'
-        url = url + 'q=' + urllib.parse.quote('select * from yahoo.finance.xchange where pair in ("')
-        url = url + urllib.parse.quote(from_cur + to_cur)
-        url = url + urllib.parse.quote('")') + '&'
+        url = url + 'q=' + urllib.parse.quote('select * from yahoo.finance.xchange where pair in (')
+        pairs = []
+        for source in from_cur:
+            for out in to_cur:
+                pairs.append(urllib.parse.quote('"' + source + out + '"'))
+        url = url + ','.join(pairs)
+        url = url + urllib.parse.quote(')') + '&'
         url = url + 'format=json' + '&'
         url = url + 'env=' + urllib.parse.quote('store://datatables.org/alltableswithkeys')
         return url
 
     def _parse_api_response(self, response, query):
-        # example:
-        # * https://translate.google.com/translate_a/single?client=gtx&hl=en&sl=auto&ssel=0&tl=en&tsel=0&q=meilleur+definition&ie=UTF-8&oe=UTF-8&otf=0&dt=t
-        #   [[["Best definition","meilleur definition",,,3]],,"fr",,,,0.34457824,,[["fr"],,[0.34457824],["fr"]]]
-        # * https://translate.google.com/translate_a/single?client=gtx&hl=en&sl=auto&ssel=0&tl=en&tsel=0&q=meilleur+definition&ie=UTF-8&oe=UTF-8&otf=0&dt=at
-        #   [,,"fr",,,[["meilleur definition",,[["Best definition",0,true,false],["better definition",0,true,false]],[[0,19]],"meilleur definition",0,0]],0.34457824,,[["fr"],,[0.34457824],["fr"]]]
-        #self.err(response)
-
         json_root = json.loads(response)
-        result = json_root['query']['results']['rate']
+        isList = json_root['query']['count'] != 1
+        results = json_root['query']['results']['rate']
+        if not isList:
+            results = [results]
+        ret = []
+        for result in results:
+            amount = float(result['Rate']) * query['amount']
 
-        ret = str(float(result['Rate']) * query['amount']) + ' ' + query['to_cur']
+            source, dest = result['Name'].split('/')
+            ret.append(('{0:.8f}'.format(amount).rstrip('0').rstrip('.') + ' ' + dest, source, dest))
 
-        return [ret]
+        return ret
 
-    def _create_translate_item(self, label, short_desc):
+    def _create_translate_item(self, label):
+
+        def joinCur(lst):
+            if len(lst) == 1:
+                return lst[0]
+            else:
+                return ', '.join(lst[:-1]) + ' and ' + lst[-1]
+
+        desc = 'Convert from {} to {}'.format(joinCur(self.default_cur_in), joinCur(self.default_cur_out))
+
         return self.create_item(
             category=self.ITEMCAT_CONVERT,
             label=label,
-            short_desc=short_desc,
+            short_desc=desc,
             target="convertcurrency",
             args_hint=kp.ItemArgsHint.REQUIRED,
             hit_hint=kp.ItemHitHint.NOARGS)
@@ -358,4 +409,50 @@ class Currency(kp.Plugin):
             short_desc=short_desc,
             target=target,
             args_hint=kp.ItemArgsHint.REQUIRED,
-            hit_hint=kp.ItemHitHint.NOARGS)
+            hit_hint=kp.ItemHitHint.NOARGS,
+            data_bag=label)
+
+    def _read_config(self):
+        def _warn_cur_code(name, fallback):
+            fmt = (
+                "Invalid {} value in config. " +
+                "Falling back to default: {}")
+            self.warn(fmt.format(name, fallback))
+
+        settings = self.load_settings()
+
+        # [default_item]
+        self.default_item_enabled = settings.get_bool(
+            "enable",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_ITEM_ENABLED)
+        self.default_item_label = settings.get_stripped(
+            "item_label",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_ITEM_LABEL)
+
+        # default input currency
+        input_code = settings.get_stripped(
+            "input_cur",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_CUR_IN)
+        validated_input_code = self._match_cur_code(input_code)
+
+        if validated_input_code is []:
+            _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
+            self.default_cur_in = self.DEFAULT_CUR_IN
+        else:
+            self.default_cur_in = validated_input_code
+
+        # default output currency
+        output_code = settings.get_stripped(
+            "output_cur",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_CUR_OUT)
+        validated_output_code = self._match_cur_code(output_code)
+
+        if validated_output_code is None:
+            _warn_cur_code("output_cur", self.DEFAULT_CUR_OUT)
+            self.default_cur_out = self.DEFAULT_CUR_OUT
+        else:
+            self.default_cur_out = validated_output_code
