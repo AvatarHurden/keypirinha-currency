@@ -4,6 +4,8 @@ import keypirinha as kp
 import keypirinha_util as kpu
 import keypirinha_net as kpnet
 
+from . import exchange
+
 import re
 import json
 import traceback
@@ -231,6 +233,8 @@ class Currency(kp.Plugin):
     def on_start(self):
         self._read_config()
 
+        rates = ExchangeRates(self.get_package_cache_path())
+        
         actions = [
             self.create_action(
                 name=self.ACTION_COPY_AMOUNT,
