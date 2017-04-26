@@ -233,8 +233,8 @@ class Currency(kp.Plugin):
     def on_start(self):
         self._read_config()
 
-        rates = ExchangeRates(self.get_package_cache_path())
-        
+        rates = ExchangeRates(self.get_package_cache_path(create=True))
+
         actions = [
             self.create_action(
                 name=self.ACTION_COPY_AMOUNT,
