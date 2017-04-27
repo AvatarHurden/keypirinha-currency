@@ -227,13 +227,15 @@ class Currency(kp.Plugin):
     ACTION_COPY_RESULT = 'copy_result'
     ACTION_COPY_AMOUNT = 'copy_amount'
 
+    broker = None
+
     def __init__(self):
         super().__init__()
 
     def on_start(self):
-        self._read_config()
+        self.broker = exchange.ExchangeRates(self.get_package_cache_path(create=True))
 
-        rates = ExchangeRates(self.get_package_cache_path(create=True))
+        self._read_config()
 
         actions = [
             self.create_action(
@@ -266,23 +268,13 @@ class Currency(kp.Plugin):
             if not query['from_cur'] or not query['to_cur'] or not user_input:
                 return
 
-            # get translated version of terms
-            opener = kpnet.build_urllib_opener()
-            opener.addheaders = [("User-agent", self.API_USER_AGENT)]
-            url = self._build_api_url(query['from_cur'], query['to_cur'], query['amount'])
-            with opener.open(url) as conn:
-                response = conn.read()
-            if self.should_terminate():
-                return
+            results = self.broker.convert(query['amount'], query['from_cur'], query['to_cur'])
 
-            # parse response from the api
-            results = self._parse_api_response(response, query)
-
-            for (label, source, dest) in results:
+            for result in results:
                 suggestions.append(self._create_result_item(
-                    label=label,
-                    short_desc= source + ' to ' + dest,
-                    target=label
+                    label=result['title'],
+                    short_desc= result['source'] + ' to ' + result['destination'],
+                    target=result['title']
                 ))
         except Exception as exc:
             suggestions.append(self.create_error_item(
@@ -344,8 +336,8 @@ class Currency(kp.Plugin):
 
             if m:
                 if m.group("from_cur") or m.group("to_cur"):
-                    from_cur = self._match_cur_code(m.group("from_cur"))
-                    to_cur = self._match_cur_code(m.group("to_cur"))
+                    from_cur = self.broker.validate_codes(m.group("from_cur"))
+                    to_cur = self.broker.validate_codes(m.group("to_cur"))
                     if from_cur:
                         query['from_cur'] = from_cur
                     if to_cur:
@@ -353,40 +345,6 @@ class Currency(kp.Plugin):
                 if m.group("amount"):
                     query['amount'] = float(m.group("amount").rstrip().replace(',', '.'))
         return query
-
-    def _match_cur_code(self, codes):
-        if not codes:
-            return []
-        lst = [x.strip() for x in codes.split(',')]
-        return [x.upper() for x in lst if x.upper() in self.currencies]
-
-    def _build_api_url(self, from_cur, to_cur, amount):
-        url = self.API_URL + '?'
-        url = url + 'q=' + urllib.parse.quote('select * from yahoo.finance.xchange where pair in (')
-        pairs = []
-        for source in from_cur:
-            for out in to_cur:
-                pairs.append(urllib.parse.quote('"' + source + out + '"'))
-        url = url + ','.join(pairs)
-        url = url + urllib.parse.quote(')') + '&'
-        url = url + 'format=json' + '&'
-        url = url + 'env=' + urllib.parse.quote('store://datatables.org/alltableswithkeys')
-        return url
-
-    def _parse_api_response(self, response, query):
-        json_root = json.loads(response)
-        isList = json_root['query']['count'] != 1
-        results = json_root['query']['results']['rate']
-        if not isList:
-            results = [results]
-        ret = []
-        for result in results:
-            amount = float(result['Rate']) * query['amount']
-
-            source, dest = result['Name'].split('/')
-            ret.append(('{0:.8f}'.format(amount).rstrip('0').rstrip('.') + ' ' + dest, source, dest))
-
-        return ret
 
     def _create_translate_item(self, label):
 
@@ -440,7 +398,7 @@ class Currency(kp.Plugin):
             "input_cur",
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_CUR_IN)
-        validated_input_code = self._match_cur_code(input_code)
+        validated_input_code = self.broker.validate_codes(input_code)
 
         if validated_input_code is []:
             _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
@@ -453,7 +411,7 @@ class Currency(kp.Plugin):
             "output_cur",
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_CUR_OUT)
-        validated_output_code = self._match_cur_code(output_code)
+        validated_output_code = self.broker.validate_codes(output_code)
 
         if validated_output_code is None:
             _warn_cur_code("output_cur", self.DEFAULT_CUR_OUT)
