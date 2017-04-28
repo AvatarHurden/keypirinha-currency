@@ -4,7 +4,7 @@ import keypirinha as kp
 import keypirinha_util as kpu
 import keypirinha_net as kpnet
 
-from . import exchange
+from .exchange import ExchangeRates, UpdateFreq
 
 import re
 import json
@@ -40,186 +40,23 @@ class Currency(kp.Plugin):
 
     More detailed documentation at: http://keypirinha.com/api/plugin.html
     """
-
-    currencies = {
-        'AED': 'United Arab Emirates Dirham',
-        'AFN': 'Afghanistan Afghani',
-        'ALL': 'Albania Lek',
-        'AMD': 'Armenia Dram',
-        'ANG': 'Netherlands Antilles Guilder',
-        'AOA': 'Angola Kwanza',
-        'ARS': 'Argentina Peso',
-        'AUD': 'Australia Dollar',
-        'AWG': 'Aruba Guilder',
-        'AZN': 'Azerbaijan New Manat',
-        'BAM': 'Bosnia and Herzegovina Convertible Marka',
-        'BBD': 'Barbados Dollar',
-        'BDT': 'Bangladesh Taka',
-        'BGN': 'Bulgaria Lev',
-        'BHD': 'Bahrain Dinar',
-        'BIF': 'Burundi Franc',
-        'BMD': 'Bermuda Dollar',
-        'BND': 'Brunei Darussalam Dollar',
-        'BOB': 'Bolivia Bolíviano',
-        'BRL': 'Brazil Real',
-        'BSD': 'Bahamas Dollar',
-        'BTN': 'Bhutan Ngultrum',
-        'BWP': 'Botswana Pula',
-        'BYN': 'Belarus Ruble',
-        'BZD': 'Belize Dollar',
-        'CAD': 'Canada Dollar',
-        'CDF': 'Congo/Kinshasa Franc',
-        'CHF': 'Switzerland Franc',
-        'CLP': 'Chile Peso',
-        'CNY': 'China Yuan Renminbi',
-        'COP': 'Colombia Peso',
-        'CRC': 'Costa Rica Colon',
-        'CUC': 'Cuba Convertible Peso',
-        'CUP': 'Cuba Peso',
-        'CVE': 'Cape Verde Escudo',
-        'CZK': 'Czech Republic Koruna',
-        'DJF': 'Djibouti Franc',
-        'DKK': 'Denmark Krone',
-        'DOP': 'Dominican Republic Peso',
-        'DZD': 'Algeria Dinar',
-        'EGP': 'Egypt Pound',
-        'ERN': 'Eritrea Nakfa',
-        'ETB': 'Ethiopia Birr',
-        'EUR': 'Euro Member Countries',
-        'FJD': 'Fiji Dollar',
-        'FKP': 'Falkland Islands (Malvinas) Pound',
-        'GBP': 'United Kingdom Pound',
-        'GEL': 'Georgia Lari',
-        'GGP': 'Guernsey Pound',
-        'GHS': 'Ghana Cedi',
-        'GIP': 'Gibraltar Pound',
-        'GMD': 'Gambia Dalasi',
-        'GNF': 'Guinea Franc',
-        'GTQ': 'Guatemala Quetzal',
-        'GYD': 'Guyana Dollar',
-        'HKD': 'Hong Kong Dollar',
-        'HNL': 'Honduras Lempira',
-        'HRK': 'Croatia Kuna',
-        'HTG': 'Haiti Gourde',
-        'HUF': 'Hungary Forint',
-        'IDR': 'Indonesia Rupiah',
-        'ILS': 'Israel Shekel',
-        'IMP': 'Isle of Man Pound',
-        'INR': 'India Rupee',
-        'IQD': 'Iraq Dinar',
-        'IRR': 'Iran Rial',
-        'ISK': 'Iceland Krona',
-        'JEP': 'Jersey Pound',
-        'JMD': 'Jamaica Dollar',
-        'JOD': 'Jordan Dinar',
-        'JPY': 'Japan Yen',
-        'KES': 'Kenya Shilling',
-        'KGS': 'Kyrgyzstan Som',
-        'KHR': 'Cambodia Riel',
-        'KMF': 'Comoros Franc',
-        'KPW': 'Korea (North) Won',
-        'KRW': 'Korea (South) Won',
-        'KWD': 'Kuwait Dinar',
-        'KYD': 'Cayman Islands Dollar',
-        'KZT': 'Kazakhstan Tenge',
-        'LAK': 'Laos Kip',
-        'LBP': 'Lebanon Pound',
-        'LKR': 'Sri Lanka Rupee',
-        'LRD': 'Liberia Dollar',
-        'LSL': 'Lesotho Loti',
-        'LYD': 'Libya Dinar',
-        'MAD': 'Morocco Dirham',
-        'MDL': 'Moldova Leu',
-        'MGA': 'Madagascar Ariary',
-        'MKD': 'Macedonia Denar',
-        'MMK': 'Myanmar (Burma) Kyat',
-        'MNT': 'Mongolia Tughrik',
-        'MOP': 'Macau Pataca',
-        'MRO': 'Mauritania Ouguiya',
-        'MUR': 'Mauritius Rupee',
-        'MVR': 'Maldives (Maldive Islands) Rufiyaa',
-        'MWK': 'Malawi Kwacha',
-        'MXN': 'Mexico Peso',
-        'MYR': 'Malaysia Ringgit',
-        'MZN': 'Mozambique Metical',
-        'NAD': 'Namibia Dollar',
-        'NGN': 'Nigeria Naira',
-        'NIO': 'Nicaragua Cordoba',
-        'NOK': 'Norway Krone',
-        'NPR': 'Nepal Rupee',
-        'NZD': 'New Zealand Dollar',
-        'OMR': 'Oman Rial',
-        'PAB': 'Panama Balboa',
-        'PEN': 'Peru Sol',
-        'PGK': 'Papua New Guinea Kina',
-        'PHP': 'Philippines Peso',
-        'PKR': 'Pakistan Rupee',
-        'PLN': 'Poland Zloty',
-        'PYG': 'Paraguay Guarani',
-        'QAR': 'Qatar Riyal',
-        'RON': 'Romania New Leu',
-        'RSD': 'Serbia Dinar',
-        'RUB': 'Russia Ruble',
-        'RWF': 'Rwanda Franc',
-        'SAR': 'Saudi Arabia Riyal',
-        'SBD': 'Solomon Islands Dollar',
-        'SCR': 'Seychelles Rupee',
-        'SDG': 'Sudan Pound',
-        'SEK': 'Sweden Krona',
-        'SGD': 'Singapore Dollar',
-        'SHP': 'Saint Helena Pound',
-        'SLL': 'Sierra Leone Leone',
-        'SOS': 'Somalia Shilling',
-        'SPL*': 'Seborga Luigino',
-        'SRD': 'Suriname Dollar',
-        'STD': 'São Tomé and Príncipe Dobra',
-        'SVC': 'El Salvador Colon',
-        'SYP': 'Syria Pound',
-        'SZL': 'Swaziland Lilangeni',
-        'THB': 'Thailand Baht',
-        'TJS': 'Tajikistan Somoni',
-        'TMT': 'Turkmenistan Manat',
-        'TND': 'Tunisia Dinar',
-        'TOP': "Tonga Pa'anga",
-        'TRY': 'Turkey Lira',
-        'TTD': 'Trinidad and Tobago Dollar',
-        'TVD': 'Tuvalu Dollar',
-        'TWD': 'Taiwan New Dollar',
-        'TZS': 'Tanzania Shilling',
-        'UAH': 'Ukraine Hryvnia',
-        'UGX': 'Uganda Shilling',
-        'USD': 'United States Dollar',
-        'UYU': 'Uruguay Peso',
-        'UZS': 'Uzbekistan Som',
-        'VEF': 'Venezuela Bolivar',
-        'VND': 'Viet Nam Dong',
-        'VUV': 'Vanuatu Vatu',
-        'WST': 'Samoa Tala',
-        'XAF': 'Communauté Financière Africaine (BEAC) CFA Franc BEAC',
-        'XCD': 'East Caribbean Dollar',
-        'XDR': 'International Monetary Fund (IMF) Special Drawing Rights',
-        'XOF': 'Communauté Financière Africaine (BCEAO) Franc',
-        'XPF': 'Comptoirs Français du Pacifique (CFP) Franc',
-        'YER': 'Yemen Rial',
-        'ZAR': 'South Africa Rand',
-        'ZMW': 'Zambia Kwacha',
-        'ZWD': 'Zimbabwe Dollar'
-    }
-
     API_URL = "http://query.yahooapis.com/v1/public/yql"
     API_USER_AGENT = "Mozilla/5.0"
 
     ITEMCAT_CONVERT = kp.ItemCategory.USER_BASE + 1
-    ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 2
+    ITEMCAT_UPDATE = kp.ItemCategory.USER_BASE + 2
+    ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 3
 
     DEFAULT_SECTION = 'defaults'
 
     DEFAULT_ITEM_ENABLED = True
+    DEFAULT_UPDATE_FREQ = 'daily'
     DEFAULT_ITEM_LABEL = 'Convert Currency'
     DEFAULT_CUR_IN = 'USD'
     DEFAULT_CUR_OUT = 'EUR, GBP'
 
     default_item_enabled = DEFAULT_ITEM_ENABLED
+    update_freq = UpdateFreq(DEFAULT_UPDATE_FREQ)
     default_item_label = DEFAULT_ITEM_LABEL
     default_cur_in = DEFAULT_CUR_IN
     default_cur_out = DEFAULT_CUR_OUT
@@ -233,8 +70,6 @@ class Currency(kp.Plugin):
         super().__init__()
 
     def on_start(self):
-        self.broker = exchange.ExchangeRates(self.get_package_cache_path(create=True))
-
         self._read_config()
 
         actions = [
@@ -251,15 +86,27 @@ class Currency(kp.Plugin):
 
     def on_catalog(self):
         catalog = []
+
+        catalog.append(self.create_item(
+            category=self.ITEMCAT_UPDATE,
+            label='Update Currency',
+            short_desc='Last updated at ' + self.broker.last_update.isoformat(),
+            target="updatecurrency",
+            args_hint=kp.ItemArgsHint.FORBIDDEN,
+            hit_hint=kp.ItemHitHint.IGNORE))
+
         if self.default_item_enabled:
             catalog.append(self._create_translate_item(
                 label=self.default_item_label))
+
         self.set_catalog(catalog)
 
     def on_suggest(self, user_input, items_chain):
-        if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
-            return
         suggestions = []
+
+        if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
+            # self.set_suggestions(suggestions)
+            return
 
         if self.should_terminate(0.25):
             return
@@ -289,6 +136,17 @@ class Currency(kp.Plugin):
         #     self.set_suggestions(suggestions)
 
     def on_execute(self, item, action):
+        print('hi')
+        if item.category() == self.ITEMCAT_UPDATE:
+            self.broker.update()
+            self.merge_catalog([self.create_item(
+                category=self.ITEMCAT_UPDATE,
+                label='Update Currency',
+                short_desc='Last updated at ' + self.broker.last_update.isoformat(),
+                target="updatecurrency",
+                args_hint=kp.ItemArgsHint.FORBIDDEN,
+                hit_hint=kp.ItemHitHint.IGNORE)])
+            return
         if item.category() != self.ITEMCAT_RESULT:
             return
 
@@ -392,6 +250,17 @@ class Currency(kp.Plugin):
             "item_label",
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_ITEM_LABEL)
+
+        update_freq_string = settings.get_enum(
+            'update_freq',
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_UPDATE_FREQ,
+            enum = [freq.value for freq in UpdateFreq]
+        )
+        self.update_freq = UpdateFreq(update_freq_string)
+
+        path = self.get_package_cache_path(create=True)
+        self.broker = ExchangeRates(path, self.update_freq)
 
         # default input currency
         input_code = settings.get_stripped(

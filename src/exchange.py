@@ -1,38 +1,49 @@
 from datetime import datetime
+from enum import Enum
+
 import keypirinha_net as kpnet
 import json
 import os
+
+class UpdateFreq(Enum):
+    NEVER = 'never'
+    HOURLY = 'hourly'
+    DAILY = 'daily'
 
 class ExchangeRates():
 
     url = "http://finance.yahoo.com/webservice/v1/symbols/allcurrencies/quote?format=json"
 
     _file_path = None
-    _last_update = None
+    last_update = None
     _currencies = {}
 
-    def __init__(self, path):
+    def __init__(self, path, update_freq):
         self._file_path = os.path.join(path, 'rates.json')
 
         if os.path.exists(self._file_path):
             self.load_from_file()
         else:
-            self.load_from_url()
-            self.save_to_file()
+            self.update()
 
-        if (datetime.now() - self._last_update).days >= 1:
-            self.load_from_url()
-            self.save_to_file()
+        time_diff = datetime.now() - self.last_update
+        if (update_freq.value == UpdateFreq.HOURLY.value and time_diff.total_seconds() >= 3600) or (update_freq.value == UpdateFreq.DAILY.value and time_diff.days >= 1):
+            self.update()
+
+    def update(self):
+        self.load_from_url()
+        self.save_to_file()
 
     def load_from_file(self):
         with open(self._file_path) as f:
             data = json.load(f)
 
-        self._last_update = datetime.strptime(data['last_update'], '%Y-%m-%dT%H:%M:%S')
+        self.last_update = datetime.strptime(data['last_update'], '%Y-%m-%dT%H:%M:%S')
         self._currencies = data['rates']
         self._load_secondary_data()
 
     def load_from_url(self):
+        print("loading from url...")
         opener = kpnet.build_urllib_opener()
         opener.addheaders = [("User-agent", "Mozilla/5.0")]
         with opener.open(self.url) as conn:
@@ -53,7 +64,7 @@ class ExchangeRates():
             }
 
             self._currencies[symbol] = private_rate
-        self._last_update = datetime.now()
+        self.last_update = datetime.now()
         self._load_secondary_data()
 
     def _load_secondary_data(self):
@@ -62,7 +73,7 @@ class ExchangeRates():
     def save_to_file(self):
         data =  {
             'rates': self._currencies,
-            'last_update': self._last_update.strftime('%Y-%m-%dT%H:%M:%S')
+            'last_update': self.last_update.strftime('%Y-%m-%dT%H:%M:%S')
         }
 
         with open(self._file_path, 'w') as f:
