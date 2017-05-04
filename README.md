@@ -47,6 +47,7 @@ This means that all of the following are allowed:
 ### v1.2
 
 * Saves exchange information locally, updating automatically or manually
+* Allow converting currencies directly in the search
 
 ### v1.1
 

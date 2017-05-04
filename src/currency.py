@@ -51,12 +51,14 @@ class Currency(kp.Plugin):
 
     DEFAULT_ITEM_ENABLED = True
     DEFAULT_UPDATE_FREQ = 'daily'
+    DEFAULT_ALWAYS_EVALUATE = True
     DEFAULT_ITEM_LABEL = 'Convert Currency'
     DEFAULT_CUR_IN = 'USD'
     DEFAULT_CUR_OUT = 'EUR, GBP'
 
     default_item_enabled = DEFAULT_ITEM_ENABLED
     update_freq = UpdateFreq(DEFAULT_UPDATE_FREQ)
+    always_evaluate = DEFAULT_ALWAYS_EVALUATE
     default_item_label = DEFAULT_ITEM_LABEL
     default_cur_in = DEFAULT_CUR_IN
     default_cur_out = DEFAULT_CUR_OUT
@@ -105,8 +107,11 @@ class Currency(kp.Plugin):
         suggestions = []
 
         if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
-            # self.set_suggestions(suggestions)
-            return
+            if not self.always_evaluate:
+                return
+            query = self._parse_and_merge_input(user_input, True)
+            if 'from_cur' not in query and 'to_cur' not in query:
+                return
 
         if self.should_terminate(0.25):
             return
@@ -136,7 +141,6 @@ class Currency(kp.Plugin):
         #     self.set_suggestions(suggestions)
 
     def on_execute(self, item, action):
-        print('hi')
         if item.category() == self.ITEMCAT_UPDATE:
             self.broker.update()
             self.merge_catalog([self.create_item(
@@ -171,11 +175,15 @@ class Currency(kp.Plugin):
             self._read_config()
             self.on_catalog()
 
-    def _parse_and_merge_input(self, user_input=None):
-        query = {
-            'from_cur': self.default_cur_in,
-            'to_cur': self.default_cur_out,
-            'amount': 1}
+    def _parse_and_merge_input(self, user_input=None, empty=False):
+        if empty:
+            query = {}
+        else:
+            query = {
+                'from_cur': self.default_cur_in,
+                'to_cur': self.default_cur_out,
+                'amount': 1
+            }
 
         # parse user input
         # * supported formats:
@@ -193,15 +201,16 @@ class Currency(kp.Plugin):
                 user_input)
 
             if m:
-                if m.group("from_cur") or m.group("to_cur"):
-                    from_cur = self.broker.validate_codes(m.group("from_cur"))
-                    to_cur = self.broker.validate_codes(m.group("to_cur"))
+                if m.group('from_cur'):
+                    from_cur = self.broker.validate_codes(m.group('from_cur'))
                     if from_cur:
                         query['from_cur'] = from_cur
+                if m.group('to_cur'):
+                    to_cur = self.broker.validate_codes(m.group('to_cur'))
                     if to_cur:
                         query['to_cur'] = to_cur
-                if m.group("amount"):
-                    query['amount'] = float(m.group("amount").rstrip().replace(',', '.'))
+                if m.group('amount'):
+                    query['amount'] = float(m.group('amount').rstrip().replace(',', '.'))
         return query
 
     def _create_translate_item(self, label):
@@ -240,6 +249,11 @@ class Currency(kp.Plugin):
             self.warn(fmt.format(name, fallback))
 
         settings = self.load_settings()
+
+        self.always_evaluate = settings.get_bool(
+            "always_evaluate",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_ALWAYS_EVALUATE)
 
         # [default_item]
         self.default_item_enabled = settings.get_bool(
