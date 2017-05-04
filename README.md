@@ -44,6 +44,11 @@ This means that all of the following are allowed:
 
 ## Change Log
 
+### v1.2
+
+* Saves exchange information locally, updating automatically or manually
+* Allow converting currencies directly in the search
+
 ### v1.1
 
 * Allow decimal amounts to be inserted (using either a comma or a period)

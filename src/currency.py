@@ -4,6 +4,8 @@ import keypirinha as kp
 import keypirinha_util as kpu
 import keypirinha_net as kpnet
 
+from .exchange import ExchangeRates, UpdateFreq
+
 import re
 import json
 import traceback
@@ -38,192 +40,33 @@ class Currency(kp.Plugin):
 
     More detailed documentation at: http://keypirinha.com/api/plugin.html
     """
-
-    currencies = {
-        'AED': 'United Arab Emirates Dirham',
-        'AFN': 'Afghanistan Afghani',
-        'ALL': 'Albania Lek',
-        'AMD': 'Armenia Dram',
-        'ANG': 'Netherlands Antilles Guilder',
-        'AOA': 'Angola Kwanza',
-        'ARS': 'Argentina Peso',
-        'AUD': 'Australia Dollar',
-        'AWG': 'Aruba Guilder',
-        'AZN': 'Azerbaijan New Manat',
-        'BAM': 'Bosnia and Herzegovina Convertible Marka',
-        'BBD': 'Barbados Dollar',
-        'BDT': 'Bangladesh Taka',
-        'BGN': 'Bulgaria Lev',
-        'BHD': 'Bahrain Dinar',
-        'BIF': 'Burundi Franc',
-        'BMD': 'Bermuda Dollar',
-        'BND': 'Brunei Darussalam Dollar',
-        'BOB': 'Bolivia Bolíviano',
-        'BRL': 'Brazil Real',
-        'BSD': 'Bahamas Dollar',
-        'BTN': 'Bhutan Ngultrum',
-        'BWP': 'Botswana Pula',
-        'BYN': 'Belarus Ruble',
-        'BZD': 'Belize Dollar',
-        'CAD': 'Canada Dollar',
-        'CDF': 'Congo/Kinshasa Franc',
-        'CHF': 'Switzerland Franc',
-        'CLP': 'Chile Peso',
-        'CNY': 'China Yuan Renminbi',
-        'COP': 'Colombia Peso',
-        'CRC': 'Costa Rica Colon',
-        'CUC': 'Cuba Convertible Peso',
-        'CUP': 'Cuba Peso',
-        'CVE': 'Cape Verde Escudo',
-        'CZK': 'Czech Republic Koruna',
-        'DJF': 'Djibouti Franc',
-        'DKK': 'Denmark Krone',
-        'DOP': 'Dominican Republic Peso',
-        'DZD': 'Algeria Dinar',
-        'EGP': 'Egypt Pound',
-        'ERN': 'Eritrea Nakfa',
-        'ETB': 'Ethiopia Birr',
-        'EUR': 'Euro Member Countries',
-        'FJD': 'Fiji Dollar',
-        'FKP': 'Falkland Islands (Malvinas) Pound',
-        'GBP': 'United Kingdom Pound',
-        'GEL': 'Georgia Lari',
-        'GGP': 'Guernsey Pound',
-        'GHS': 'Ghana Cedi',
-        'GIP': 'Gibraltar Pound',
-        'GMD': 'Gambia Dalasi',
-        'GNF': 'Guinea Franc',
-        'GTQ': 'Guatemala Quetzal',
-        'GYD': 'Guyana Dollar',
-        'HKD': 'Hong Kong Dollar',
-        'HNL': 'Honduras Lempira',
-        'HRK': 'Croatia Kuna',
-        'HTG': 'Haiti Gourde',
-        'HUF': 'Hungary Forint',
-        'IDR': 'Indonesia Rupiah',
-        'ILS': 'Israel Shekel',
-        'IMP': 'Isle of Man Pound',
-        'INR': 'India Rupee',
-        'IQD': 'Iraq Dinar',
-        'IRR': 'Iran Rial',
-        'ISK': 'Iceland Krona',
-        'JEP': 'Jersey Pound',
-        'JMD': 'Jamaica Dollar',
-        'JOD': 'Jordan Dinar',
-        'JPY': 'Japan Yen',
-        'KES': 'Kenya Shilling',
-        'KGS': 'Kyrgyzstan Som',
-        'KHR': 'Cambodia Riel',
-        'KMF': 'Comoros Franc',
-        'KPW': 'Korea (North) Won',
-        'KRW': 'Korea (South) Won',
-        'KWD': 'Kuwait Dinar',
-        'KYD': 'Cayman Islands Dollar',
-        'KZT': 'Kazakhstan Tenge',
-        'LAK': 'Laos Kip',
-        'LBP': 'Lebanon Pound',
-        'LKR': 'Sri Lanka Rupee',
-        'LRD': 'Liberia Dollar',
-        'LSL': 'Lesotho Loti',
-        'LYD': 'Libya Dinar',
-        'MAD': 'Morocco Dirham',
-        'MDL': 'Moldova Leu',
-        'MGA': 'Madagascar Ariary',
-        'MKD': 'Macedonia Denar',
-        'MMK': 'Myanmar (Burma) Kyat',
-        'MNT': 'Mongolia Tughrik',
-        'MOP': 'Macau Pataca',
-        'MRO': 'Mauritania Ouguiya',
-        'MUR': 'Mauritius Rupee',
-        'MVR': 'Maldives (Maldive Islands) Rufiyaa',
-        'MWK': 'Malawi Kwacha',
-        'MXN': 'Mexico Peso',
-        'MYR': 'Malaysia Ringgit',
-        'MZN': 'Mozambique Metical',
-        'NAD': 'Namibia Dollar',
-        'NGN': 'Nigeria Naira',
-        'NIO': 'Nicaragua Cordoba',
-        'NOK': 'Norway Krone',
-        'NPR': 'Nepal Rupee',
-        'NZD': 'New Zealand Dollar',
-        'OMR': 'Oman Rial',
-        'PAB': 'Panama Balboa',
-        'PEN': 'Peru Sol',
-        'PGK': 'Papua New Guinea Kina',
-        'PHP': 'Philippines Peso',
-        'PKR': 'Pakistan Rupee',
-        'PLN': 'Poland Zloty',
-        'PYG': 'Paraguay Guarani',
-        'QAR': 'Qatar Riyal',
-        'RON': 'Romania New Leu',
-        'RSD': 'Serbia Dinar',
-        'RUB': 'Russia Ruble',
-        'RWF': 'Rwanda Franc',
-        'SAR': 'Saudi Arabia Riyal',
-        'SBD': 'Solomon Islands Dollar',
-        'SCR': 'Seychelles Rupee',
-        'SDG': 'Sudan Pound',
-        'SEK': 'Sweden Krona',
-        'SGD': 'Singapore Dollar',
-        'SHP': 'Saint Helena Pound',
-        'SLL': 'Sierra Leone Leone',
-        'SOS': 'Somalia Shilling',
-        'SPL*': 'Seborga Luigino',
-        'SRD': 'Suriname Dollar',
-        'STD': 'São Tomé and Príncipe Dobra',
-        'SVC': 'El Salvador Colon',
-        'SYP': 'Syria Pound',
-        'SZL': 'Swaziland Lilangeni',
-        'THB': 'Thailand Baht',
-        'TJS': 'Tajikistan Somoni',
-        'TMT': 'Turkmenistan Manat',
-        'TND': 'Tunisia Dinar',
-        'TOP': "Tonga Pa'anga",
-        'TRY': 'Turkey Lira',
-        'TTD': 'Trinidad and Tobago Dollar',
-        'TVD': 'Tuvalu Dollar',
-        'TWD': 'Taiwan New Dollar',
-        'TZS': 'Tanzania Shilling',
-        'UAH': 'Ukraine Hryvnia',
-        'UGX': 'Uganda Shilling',
-        'USD': 'United States Dollar',
-        'UYU': 'Uruguay Peso',
-        'UZS': 'Uzbekistan Som',
-        'VEF': 'Venezuela Bolivar',
-        'VND': 'Viet Nam Dong',
-        'VUV': 'Vanuatu Vatu',
-        'WST': 'Samoa Tala',
-        'XAF': 'Communauté Financière Africaine (BEAC) CFA Franc BEAC',
-        'XCD': 'East Caribbean Dollar',
-        'XDR': 'International Monetary Fund (IMF) Special Drawing Rights',
-        'XOF': 'Communauté Financière Africaine (BCEAO) Franc',
-        'XPF': 'Comptoirs Français du Pacifique (CFP) Franc',
-        'YER': 'Yemen Rial',
-        'ZAR': 'South Africa Rand',
-        'ZMW': 'Zambia Kwacha',
-        'ZWD': 'Zimbabwe Dollar'
-    }
-
     API_URL = "http://query.yahooapis.com/v1/public/yql"
     API_USER_AGENT = "Mozilla/5.0"
 
     ITEMCAT_CONVERT = kp.ItemCategory.USER_BASE + 1
-    ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 2
+    ITEMCAT_UPDATE = kp.ItemCategory.USER_BASE + 2
+    ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 3
 
     DEFAULT_SECTION = 'defaults'
 
     DEFAULT_ITEM_ENABLED = True
+    DEFAULT_UPDATE_FREQ = 'daily'
+    DEFAULT_ALWAYS_EVALUATE = True
     DEFAULT_ITEM_LABEL = 'Convert Currency'
     DEFAULT_CUR_IN = 'USD'
     DEFAULT_CUR_OUT = 'EUR, GBP'
 
     default_item_enabled = DEFAULT_ITEM_ENABLED
+    update_freq = UpdateFreq(DEFAULT_UPDATE_FREQ)
+    always_evaluate = DEFAULT_ALWAYS_EVALUATE
     default_item_label = DEFAULT_ITEM_LABEL
     default_cur_in = DEFAULT_CUR_IN
     default_cur_out = DEFAULT_CUR_OUT
 
     ACTION_COPY_RESULT = 'copy_result'
     ACTION_COPY_AMOUNT = 'copy_amount'
+
+    broker = None
 
     def __init__(self):
         super().__init__()
@@ -245,15 +88,30 @@ class Currency(kp.Plugin):
 
     def on_catalog(self):
         catalog = []
+
+        catalog.append(self.create_item(
+            category=self.ITEMCAT_UPDATE,
+            label='Update Currency',
+            short_desc='Last updated at ' + self.broker.last_update.isoformat(),
+            target="updatecurrency",
+            args_hint=kp.ItemArgsHint.FORBIDDEN,
+            hit_hint=kp.ItemHitHint.IGNORE))
+
         if self.default_item_enabled:
             catalog.append(self._create_translate_item(
                 label=self.default_item_label))
+
         self.set_catalog(catalog)
 
     def on_suggest(self, user_input, items_chain):
-        if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
-            return
         suggestions = []
+
+        if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
+            if not self.always_evaluate:
+                return
+            query = self._parse_and_merge_input(user_input, True)
+            if 'from_cur' not in query and 'to_cur' not in query:
+                return
 
         if self.should_terminate(0.25):
             return
@@ -262,23 +120,13 @@ class Currency(kp.Plugin):
             if not query['from_cur'] or not query['to_cur'] or not user_input:
                 return
 
-            # get translated version of terms
-            opener = kpnet.build_urllib_opener()
-            opener.addheaders = [("User-agent", self.API_USER_AGENT)]
-            url = self._build_api_url(query['from_cur'], query['to_cur'], query['amount'])
-            with opener.open(url) as conn:
-                response = conn.read()
-            if self.should_terminate():
-                return
+            results = self.broker.convert(query['amount'], query['from_cur'], query['to_cur'])
 
-            # parse response from the api
-            results = self._parse_api_response(response, query)
-
-            for (label, source, dest) in results:
+            for result in results:
                 suggestions.append(self._create_result_item(
-                    label=label,
-                    short_desc= source + ' to ' + dest,
-                    target=label
+                    label=result['title'],
+                    short_desc= result['source'] + ' to ' + result['destination'],
+                    target=result['title']
                 ))
         except Exception as exc:
             suggestions.append(self.create_error_item(
@@ -293,6 +141,16 @@ class Currency(kp.Plugin):
         #     self.set_suggestions(suggestions)
 
     def on_execute(self, item, action):
+        if item.category() == self.ITEMCAT_UPDATE:
+            self.broker.update()
+            self.merge_catalog([self.create_item(
+                category=self.ITEMCAT_UPDATE,
+                label='Update Currency',
+                short_desc='Last updated at ' + self.broker.last_update.isoformat(),
+                target="updatecurrency",
+                args_hint=kp.ItemArgsHint.FORBIDDEN,
+                hit_hint=kp.ItemHitHint.IGNORE)])
+            return
         if item.category() != self.ITEMCAT_RESULT:
             return
 
@@ -317,11 +175,15 @@ class Currency(kp.Plugin):
             self._read_config()
             self.on_catalog()
 
-    def _parse_and_merge_input(self, user_input=None):
-        query = {
-            'from_cur': self.default_cur_in,
-            'to_cur': self.default_cur_out,
-            'amount': 1}
+    def _parse_and_merge_input(self, user_input=None, empty=False):
+        if empty:
+            query = {}
+        else:
+            query = {
+                'from_cur': self.default_cur_in,
+                'to_cur': self.default_cur_out,
+                'amount': 1
+            }
 
         # parse user input
         # * supported formats:
@@ -339,50 +201,17 @@ class Currency(kp.Plugin):
                 user_input)
 
             if m:
-                if m.group("from_cur") or m.group("to_cur"):
-                    from_cur = self._match_cur_code(m.group("from_cur"))
-                    to_cur = self._match_cur_code(m.group("to_cur"))
+                if m.group('from_cur'):
+                    from_cur = self.broker.validate_codes(m.group('from_cur'))
                     if from_cur:
                         query['from_cur'] = from_cur
+                if m.group('to_cur'):
+                    to_cur = self.broker.validate_codes(m.group('to_cur'))
                     if to_cur:
                         query['to_cur'] = to_cur
-                if m.group("amount"):
-                    query['amount'] = float(m.group("amount").rstrip().replace(',', '.'))
+                if m.group('amount'):
+                    query['amount'] = float(m.group('amount').rstrip().replace(',', '.'))
         return query
-
-    def _match_cur_code(self, codes):
-        if not codes:
-            return []
-        lst = [x.strip() for x in codes.split(',')]
-        return [x.upper() for x in lst if x.upper() in self.currencies]
-
-    def _build_api_url(self, from_cur, to_cur, amount):
-        url = self.API_URL + '?'
-        url = url + 'q=' + urllib.parse.quote('select * from yahoo.finance.xchange where pair in (')
-        pairs = []
-        for source in from_cur:
-            for out in to_cur:
-                pairs.append(urllib.parse.quote('"' + source + out + '"'))
-        url = url + ','.join(pairs)
-        url = url + urllib.parse.quote(')') + '&'
-        url = url + 'format=json' + '&'
-        url = url + 'env=' + urllib.parse.quote('store://datatables.org/alltableswithkeys')
-        return url
-
-    def _parse_api_response(self, response, query):
-        json_root = json.loads(response)
-        isList = json_root['query']['count'] != 1
-        results = json_root['query']['results']['rate']
-        if not isList:
-            results = [results]
-        ret = []
-        for result in results:
-            amount = float(result['Rate']) * query['amount']
-
-            source, dest = result['Name'].split('/')
-            ret.append(('{0:.8f}'.format(amount).rstrip('0').rstrip('.') + ' ' + dest, source, dest))
-
-        return ret
 
     def _create_translate_item(self, label):
 
@@ -421,6 +250,11 @@ class Currency(kp.Plugin):
 
         settings = self.load_settings()
 
+        self.always_evaluate = settings.get_bool(
+            "always_evaluate",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_ALWAYS_EVALUATE)
+
         # [default_item]
         self.default_item_enabled = settings.get_bool(
             "enable",
@@ -431,12 +265,23 @@ class Currency(kp.Plugin):
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_ITEM_LABEL)
 
+        update_freq_string = settings.get_enum(
+            'update_freq',
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_UPDATE_FREQ,
+            enum = [freq.value for freq in UpdateFreq]
+        )
+        self.update_freq = UpdateFreq(update_freq_string)
+
+        path = self.get_package_cache_path(create=True)
+        self.broker = ExchangeRates(path, self.update_freq)
+
         # default input currency
         input_code = settings.get_stripped(
             "input_cur",
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_CUR_IN)
-        validated_input_code = self._match_cur_code(input_code)
+        validated_input_code = self.broker.validate_codes(input_code)
 
         if validated_input_code is []:
             _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
@@ -449,7 +294,7 @@ class Currency(kp.Plugin):
             "output_cur",
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_CUR_OUT)
-        validated_output_code = self._match_cur_code(output_code)
+        validated_output_code = self.broker.validate_codes(output_code)
 
         if validated_output_code is None:
             _warn_cur_code("output_cur", self.DEFAULT_CUR_OUT)
