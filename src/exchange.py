@@ -16,9 +16,11 @@ class ExchangeRates():
 
     _file_path = None
     last_update = None
+    update_freq = None
     _currencies = {}
 
     def __init__(self, path, update_freq):
+        self.update_freq = update_freq
         self._file_path = os.path.join(path, 'rates.json')
 
         if os.path.exists(self._file_path):
@@ -26,9 +28,15 @@ class ExchangeRates():
         else:
             self.update()
 
+        self.tryUpdate()
+
+    def tryUpdate(self):
         time_diff = datetime.now() - self.last_update
-        if (update_freq.value == UpdateFreq.HOURLY.value and time_diff.total_seconds() >= 3600) or (update_freq.value == UpdateFreq.DAILY.value and time_diff.days >= 1):
+        if (self.update_freq.value == UpdateFreq.HOURLY.value and time_diff.total_seconds() >= 3600) or (self.update_freq.value == UpdateFreq.DAILY.value and time_diff.days >= 1):
             self.update()
+            return True
+        else:
+            return False
 
     def update(self):
         self.load_from_url()

@@ -89,19 +89,12 @@ class Currency(kp.Plugin):
     def on_catalog(self):
         catalog = []
 
-        catalog.append(self.create_item(
-            category=self.ITEMCAT_UPDATE,
-            label='Update Currency',
-            short_desc='Last updated at ' + self.broker.last_update.isoformat(),
-            target="updatecurrency",
-            args_hint=kp.ItemArgsHint.FORBIDDEN,
-            hit_hint=kp.ItemHitHint.IGNORE))
-
         if self.default_item_enabled:
             catalog.append(self._create_translate_item(
                 label=self.default_item_label))
 
         self.set_catalog(catalog)
+        self._update_update_item()
 
     def on_suggest(self, user_input, items_chain):
         suggestions = []
@@ -120,6 +113,8 @@ class Currency(kp.Plugin):
             if not query['from_cur'] or not query['to_cur'] or not user_input:
                 return
 
+            if self.broker.tryUpdate():
+                self._update_update_item()
             results = self.broker.convert(query['amount'], query['from_cur'], query['to_cur'])
 
             for result in results:
@@ -143,13 +138,7 @@ class Currency(kp.Plugin):
     def on_execute(self, item, action):
         if item.category() == self.ITEMCAT_UPDATE:
             self.broker.update()
-            self.merge_catalog([self.create_item(
-                category=self.ITEMCAT_UPDATE,
-                label='Update Currency',
-                short_desc='Last updated at ' + self.broker.last_update.isoformat(),
-                target="updatecurrency",
-                args_hint=kp.ItemArgsHint.FORBIDDEN,
-                hit_hint=kp.ItemHitHint.IGNORE)])
+            self._update_update_item()
             return
         if item.category() != self.ITEMCAT_RESULT:
             return
@@ -212,6 +201,15 @@ class Currency(kp.Plugin):
                 if m.group('amount'):
                     query['amount'] = float(m.group('amount').rstrip().replace(',', '.'))
         return query
+
+    def _update_update_item(self):
+        self.merge_catalog([self.create_item(
+            category=self.ITEMCAT_UPDATE,
+            label='Update Currency',
+            short_desc='Last updated at ' + self.broker.last_update.isoformat(),
+            target="updatecurrency",
+            args_hint=kp.ItemArgsHint.FORBIDDEN,
+            hit_hint=kp.ItemHitHint.IGNORE)])
 
     def _create_translate_item(self, label):
 
