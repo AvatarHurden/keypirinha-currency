@@ -24,9 +24,10 @@ class ExchangeRates():
         self._file_path = os.path.join(path, 'rates.json')
 
         if os.path.exists(self._file_path):
-            self.load_from_file()
-        else:
-            self.update()
+            try:
+                self.load_from_file()
+            except Exception as e:
+                self.update()
 
         self.tryUpdate()
 
