@@ -28,10 +28,14 @@ class ExchangeRates():
                 self.load_from_file()
             except Exception as e:
                 self.update()
+        else:
+            self.update()
 
         self.tryUpdate()
 
     def tryUpdate(self):
+        if not self.last_update:
+            return True
         time_diff = datetime.now() - self.last_update
         if (self.update_freq.value == UpdateFreq.HOURLY.value and time_diff.total_seconds() >= 3600) or (self.update_freq.value == UpdateFreq.DAILY.value and time_diff.days >= 1):
             self.update()
