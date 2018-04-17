@@ -66,17 +66,21 @@ class ExchangeRates():
 
         self._currencies = {}
         for rate in rates:
-            fields = rate['resource']['fields']
-            symbol = fields['symbol'][0:3]
-            name = fields['name'].replace('USD/', '')
-            price = float(fields['price'])
+            try:
+                fields = rate['resource']['fields']
+                symbol = fields['symbol'][0:3]
+                name = fields['name'].replace('USD/', '')
+                price = float(fields['price'])
 
-            private_rate = {
-                'name': name,
-                'price': price
-            }
+                private_rate = {
+                    'name': name,
+                    'price': price
+                }
 
-            self._currencies[symbol] = private_rate
+                self._currencies[symbol] = private_rate
+            except Exception:
+                pass
+
         self.last_update = datetime.now()
         self._load_secondary_data()
 
