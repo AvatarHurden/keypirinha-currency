@@ -28,10 +28,14 @@ class ExchangeRates():
                 self.load_from_file()
             except Exception as e:
                 self.update()
+        else:
+            self.update()
 
         self.tryUpdate()
 
     def tryUpdate(self):
+        if not self.last_update:
+            return True
         time_diff = datetime.now() - self.last_update
         if (self.update_freq.value == UpdateFreq.HOURLY.value and time_diff.total_seconds() >= 3600) or (self.update_freq.value == UpdateFreq.DAILY.value and time_diff.days >= 1):
             self.update()
@@ -62,17 +66,21 @@ class ExchangeRates():
 
         self._currencies = {}
         for rate in rates:
-            fields = rate['resource']['fields']
-            symbol = fields['symbol'][0:3]
-            name = fields['name'].replace('USD/', '')
-            price = float(fields['price'])
+            try:
+                fields = rate['resource']['fields']
+                symbol = fields['symbol'][0:3]
+                name = fields['name'].replace('USD/', '')
+                price = float(fields['price'])
 
-            private_rate = {
-                'name': name,
-                'price': price
-            }
+                private_rate = {
+                    'name': name,
+                    'price': price
+                }
 
-            self._currencies[symbol] = private_rate
+                self._currencies[symbol] = private_rate
+            except Exception:
+                pass
+
         self.last_update = datetime.now()
         self._load_secondary_data()
 
