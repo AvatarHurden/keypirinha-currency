@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from .webservice import YahooFinance
+from .webservice import YahooFinance, OpenExchangeRates
 
 import json
 import os
@@ -14,7 +14,7 @@ class UpdateFreq(Enum):
 
 class ExchangeRates():
 
-    service = YahooFinance()
+    service = OpenExchangeRates()
 
     _file_path = None
     last_update = None
