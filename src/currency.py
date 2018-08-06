@@ -115,18 +115,24 @@ class Currency(kp.Plugin):
 
             if self.broker.tryUpdate():
                 self._update_update_item()
-            results = self.broker.convert(query['amount'], query['from_cur'], query['to_cur'])
 
-            for result in results:
-                suggestions.append(self._create_result_item(
-                    label=result['title'],
-                    short_desc= result['source'] + ' to ' + result['destination'],
-                    target=result['title']
-                ))
+            if self.broker.error:
+                suggestions.append(self.create_error_item(
+                    label=user_input,
+                    short_desc="Webservice failed ({})".format(self.broker.error)))
+            else:
+                results = self.broker.convert(query['amount'], query['from_cur'], query['to_cur'])
+
+                for result in results:
+                    suggestions.append(self._create_result_item(
+                        label=result['title'],
+                        short_desc= result['source'] + ' to ' + result['destination'],
+                        target=result['title']
+                    ))
         except Exception as exc:
             suggestions.append(self.create_error_item(
-            label=user_input,
-            short_desc="Error: " + str(exc)))
+                label=user_input,
+                short_desc="Error: " + str(exc)))
 
         self.set_suggestions(suggestions, kp.Match.ANY, kp.Sort.NONE)
         # else
