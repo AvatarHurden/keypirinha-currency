@@ -1,23 +1,27 @@
 from datetime import datetime
 from enum import Enum
+from .webservice import YahooFinance
 
-import keypirinha_net as kpnet
 import json
 import os
+
 
 class UpdateFreq(Enum):
     NEVER = 'never'
     HOURLY = 'hourly'
     DAILY = 'daily'
 
+
 class ExchangeRates():
 
-    url = "http://finance.yahoo.com/webservice/v1/symbols/allcurrencies/quote?format=json"
+    service = YahooFinance()
 
     _file_path = None
     last_update = None
     update_freq = None
     _currencies = {}
+
+    error = None
 
     def __init__(self, path, update_freq):
         self.update_freq = update_freq
@@ -33,19 +37,34 @@ class ExchangeRates():
 
         self.tryUpdate()
 
+    def shouldUpdate(self):
+        time_diff = datetime.now() - self.last_update
+        if self.update_freq.value == UpdateFreq.HOURLY.value:
+            return time_diff.total_seconds() >= 3600
+        elif self.update_freq.value == UpdateFreq.DAILY.value:
+            return time_diff.days >= 1
+        else:
+            return False
+
     def tryUpdate(self):
         if not self.last_update:
             return True
-        time_diff = datetime.now() - self.last_update
-        if (self.update_freq.value == UpdateFreq.HOURLY.value and time_diff.total_seconds() >= 3600) or (self.update_freq.value == UpdateFreq.DAILY.value and time_diff.days >= 1):
-            self.update()
-            return True
+        if self.shouldUpdate():
+            return self.update()
         else:
             return False
 
     def update(self):
-        self.load_from_url()
-        self.save_to_file()
+        try:
+            self.currencies = self.service.load_from_url()
+            self.last_update = datetime.now()
+            self.save_to_file()
+            self.error = None
+            return True
+        except Exception as e:
+            print(e)
+            self.error = e
+            return False
 
     def load_from_file(self):
         with open(self._file_path) as f:
@@ -55,40 +74,11 @@ class ExchangeRates():
         self._currencies = data['rates']
         self._load_secondary_data()
 
-    def load_from_url(self):
-        print("loading from url...")
-        opener = kpnet.build_urllib_opener()
-        opener.addheaders = [("User-agent", "Mozilla/5.0")]
-        with opener.open(self.url) as conn:
-            response = conn.read()
-        data = json.loads(response)
-        rates = data['list']['resources']
-
-        self._currencies = {}
-        for rate in rates:
-            try:
-                fields = rate['resource']['fields']
-                symbol = fields['symbol'][0:3]
-                name = fields['name'].replace('USD/', '')
-                price = float(fields['price'])
-
-                private_rate = {
-                    'name': name,
-                    'price': price
-                }
-
-                self._currencies[symbol] = private_rate
-            except Exception:
-                pass
-
-        self.last_update = datetime.now()
-        self._load_secondary_data()
-
     def _load_secondary_data(self):
         pass
 
     def save_to_file(self):
-        data =  {
+        data = {
             'rates': self._currencies,
             'last_update': self.last_update.strftime('%Y-%m-%dT%H:%M:%S')
         }
