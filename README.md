@@ -44,6 +44,10 @@ This means that all of the following are allowed:
 
 ## Change Log
 
+### v1.3
+
+* Changed API from Yahoo Finance to OpenExchangeRates
+
 ### v1.2
 
 * Saves exchange information locally, updating automatically or manually
