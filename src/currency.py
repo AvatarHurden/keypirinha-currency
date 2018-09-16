@@ -287,9 +287,9 @@ class Currency(kp.Plugin):
             fallback=self.DEFAULT_CUR_IN)
         validated_input_code = self.broker.validate_codes(input_code)
 
-        if validated_input_code is []:
+        if not validated_input_code:
             _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
-            self.default_cur_in = self.DEFAULT_CUR_IN
+            self.default_cur_in = self.broker.validate_codes(self.DEFAULT_CUR_IN)
         else:
             self.default_cur_in = validated_input_code
 
@@ -300,8 +300,8 @@ class Currency(kp.Plugin):
             fallback=self.DEFAULT_CUR_OUT)
         validated_output_code = self.broker.validate_codes(output_code)
 
-        if validated_output_code is None:
+        if not validated_output_code:
             _warn_cur_code("output_cur", self.DEFAULT_CUR_OUT)
-            self.default_cur_out = self.DEFAULT_CUR_OUT
+            self.default_cur_out = self.broker.validate_codes(self.DEFAULT_CUR_OUT)
         else:
             self.default_cur_out = validated_output_code
