@@ -14,8 +14,6 @@ class UpdateFreq(Enum):
 
 class ExchangeRates():
 
-    service = OpenExchangeRates()
-
     _file_path = None
     last_update = None
     update_freq = None
@@ -23,7 +21,9 @@ class ExchangeRates():
 
     error = None
 
-    def __init__(self, path, update_freq):
+    def __init__(self, path, update_freq, plugin):
+        self.plugin = plugin
+        self.service = OpenExchangeRates(self.plugin)
         self.update_freq = update_freq
         self._file_path = os.path.join(path, 'rates.json')
 
@@ -56,7 +56,7 @@ class ExchangeRates():
 
     def update(self):
         try:
-            self.currencies = self.service.load_from_url()
+            self._currencies = self.service.load_from_url()
             self.last_update = datetime.now()
             self.save_to_file()
             self.error = None
@@ -92,8 +92,12 @@ class ExchangeRates():
         else:
             return self._currencies[code]['price']
 
-    def validate_codes(self, codeString):
+    def format_codes(self, codeString):
         lst = [x.strip() for x in codeString.split(',')]
+        return lst
+
+    def validate_codes(self, codeString):
+        lst = self.format_codes(codeString)
         return [x.upper() for x in lst if x.upper() in self._currencies.keys()]
 
     def convert(self, amount, sources, destinations):
