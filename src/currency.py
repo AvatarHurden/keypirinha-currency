@@ -289,7 +289,7 @@ class Currency(kp.Plugin):
 
         if not validated_input_code:
             _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
-            self.default_cur_in = self.broker.validate_codes(self.DEFAULT_CUR_IN)
+            self.default_cur_in = self.broker.format_codes(self.DEFAULT_CUR_IN)
         else:
             self.default_cur_in = validated_input_code
 
@@ -302,6 +302,6 @@ class Currency(kp.Plugin):
 
         if not validated_output_code:
             _warn_cur_code("output_cur", self.DEFAULT_CUR_OUT)
-            self.default_cur_out = self.broker.validate_codes(self.DEFAULT_CUR_OUT)
+            self.default_cur_out = self.broker.format_codes(self.DEFAULT_CUR_OUT)
         else:
             self.default_cur_out = validated_output_code

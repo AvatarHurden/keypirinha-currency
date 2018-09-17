@@ -56,7 +56,7 @@ class ExchangeRates():
 
     def update(self):
         try:
-            self.currencies = self.service.load_from_url()
+            self._currencies = self.service.load_from_url()
             self.last_update = datetime.now()
             self.save_to_file()
             self.error = None
@@ -92,8 +92,12 @@ class ExchangeRates():
         else:
             return self._currencies[code]['price']
 
-    def validate_codes(self, codeString):
+    def format_codes(self, codeString):
         lst = [x.strip() for x in codeString.split(',')]
+        return lst
+
+    def validate_codes(self, codeString):
+        lst = self.format_codes(codeString)
         return [x.upper() for x in lst if x.upper() in self._currencies.keys()]
 
     def convert(self, amount, sources, destinations):
