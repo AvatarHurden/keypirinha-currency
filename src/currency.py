@@ -99,6 +99,9 @@ class Currency(kp.Plugin):
     def on_suggest(self, user_input, items_chain):
         suggestions = []
 
+        if items_chain and items_chain[-1].category() == self.ITEMCAT_RESULT:
+            self.set_suggestions(items_chain, kp.Match.ANY, kp.Sort.NONE)
+            return
         if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
             if not self.always_evaluate:
                 return
