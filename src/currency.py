@@ -281,7 +281,7 @@ class Currency(kp.Plugin):
         self.update_freq = UpdateFreq(update_freq_string)
 
         path = self.get_package_cache_path(create=True)
-        self.broker = ExchangeRates(path, self.update_freq)
+        self.broker = ExchangeRates(path, self.update_freq, self)
 
         # default input currency
         input_code = settings.get_stripped(

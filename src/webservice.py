@@ -44,11 +44,14 @@ class OpenExchangeRates():
     url = 'https://openexchangerates.org/api/latest.json'
     APPID = '462d6b7ade734ce1b59201196765d8d7'
 
+    def __init__(self, plugin):
+        self.plugin = plugin
+
     def build_request(self, parameters):
         return self.url + '?' + urllib.parse.urlencode(parameters)
 
     def load_from_url(self):
-        print("loading from url...")
+        self.plugin.info("loading from url...")
         opener = kpnet.build_urllib_opener()
         opener.addheaders = [("User-agent", "Mozilla/5.0")]
 
@@ -59,6 +62,7 @@ class OpenExchangeRates():
 
         with opener.open(requestURL) as conn:
             response = conn.read()
+
         data = json.loads(response)
         rates = data['rates']
 
@@ -68,7 +72,6 @@ class OpenExchangeRates():
                 'name': rate,
                 'price': rates[rate]
             }
-
             currencies[rate] = private_rate
 
         return currencies

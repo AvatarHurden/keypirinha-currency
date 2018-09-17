@@ -14,8 +14,6 @@ class UpdateFreq(Enum):
 
 class ExchangeRates():
 
-    service = OpenExchangeRates()
-
     _file_path = None
     last_update = None
     update_freq = None
@@ -23,7 +21,9 @@ class ExchangeRates():
 
     error = None
 
-    def __init__(self, path, update_freq):
+    def __init__(self, path, update_freq, plugin):
+        self.plugin = plugin
+        self.service = OpenExchangeRates(self.plugin)
         self.update_freq = update_freq
         self._file_path = os.path.join(path, 'rates.json')
 
