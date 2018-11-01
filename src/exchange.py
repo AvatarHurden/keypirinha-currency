@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from .webservice import YahooFinance, OpenExchangeRates
+from .webservice import OpenExchangeRates, PrivateDomain
 
 import json
 import os
@@ -23,7 +23,8 @@ class ExchangeRates():
 
     def __init__(self, path, update_freq, plugin):
         self.plugin = plugin
-        self.service = OpenExchangeRates(self.plugin)
+        self.cheap_service = PrivateDomain(self.plugin)
+        self.expensive_service = OpenExchangeRates(self.plugin)
         self.update_freq = update_freq
         self._file_path = os.path.join(path, 'rates.json')
 
@@ -56,8 +57,14 @@ class ExchangeRates():
 
     def update(self):
         try:
-            self._currencies = self.service.load_from_url()
+            self._currencies, update_time = self.cheap_service.load_from_url()
             self.last_update = datetime.now()
+            time_diff = self.last_update - datetime.fromtimestamp(update_time)
+
+            if (time_diff.total_seconds() > 3600 * 2):
+                self.plugin.info('cache server is more than 2 hours old. Requesting from main API')
+                self._currencies, update_time = self.expensive_service.load_from_url()
+
             self.save_to_file()
             self.error = None
             return True
