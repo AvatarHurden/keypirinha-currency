@@ -3,40 +3,38 @@ import urllib
 import json
 
 
-class YahooFinance():
+class PrivateDomain():
 
-    url = "http://finance.yahoo.com/webservice/v1/symbols/allcurrencies/quote?format=json"
+    url = 'https://arthurvedana.com/currency/latest.json'
+
+    def __init__(self, plugin):
+        self.plugin = plugin
+
+    def build_request(self):
+        return self.url
 
     def load_from_url(self):
-        print("loading from url...")
+        self.plugin.info("loading from cache server...")
         opener = kpnet.build_urllib_opener()
         opener.addheaders = [("User-agent", "Mozilla/5.0")]
-        with opener.open(self.url) as conn:
+
+        requestURL = self.build_request()
+
+        with opener.open(requestURL) as conn:
             response = conn.read()
+
         data = json.loads(response)
-        rates = data['list']['resources']
+        rates = data['rates']
 
         currencies = {}
         for rate in rates:
-            try:
-                fields = rate['resource']['fields']
-                symbol = fields['symbol'][0:3]
-                name = fields['name'].replace('USD/', '')
-                price = float(fields['price'])
+            private_rate = {
+                'name': rate,
+                'price': rates[rate]
+            }
+            currencies[rate] = private_rate
 
-                private_rate = {
-                    'name': name,
-                    'price': price
-                }
-
-                currencies[symbol] = private_rate
-            except Exception:
-                pass
-
-        return currencies
-
-    def _load_secondary_data(self):
-        pass
+        return currencies, data['timestamp']
 
 
 class OpenExchangeRates():
@@ -51,9 +49,9 @@ class OpenExchangeRates():
         return self.url + '?' + urllib.parse.urlencode(parameters)
 
     def load_from_url(self):
-        self.plugin.info("loading from url...")
+        self.plugin.info("loading from API...")
         opener = kpnet.build_urllib_opener()
-        opener.addheaders = [("User-agent", "Mozilla/5.0")]
+        #opener.addheaders = [("User-agent", "Mozilla/5.0")]
 
         params = {'app_id': self.APPID,
                   'show_alternative': True}
@@ -74,4 +72,4 @@ class OpenExchangeRates():
             }
             currencies[rate] = private_rate
 
-        return currencies
+        return currencies, data['timestamp']
