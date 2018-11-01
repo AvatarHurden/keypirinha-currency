@@ -21,11 +21,11 @@ move it to the `InstalledPackage` folder located at:
 
 ## Usage
 
-A ```Convert Currency``` item is inserted into the catalog with conversion from USD to BRL.
+A ```Convert Currency``` item is inserted into the catalog.
 Select this item to enter conversion mode.
 
 Enter the amount to convert, the source currency code and the destination currency code.
-If either the source and destination currency is omitted, the defaults are used.
+If either the source or destination currency are omitted, the defaults are used.
 If the amount is omitted, the current exchange rate is shown.
 
 *Currency* allows the source and destination currencies to be separated by any of the following:
@@ -43,6 +43,10 @@ This means that all of the following are allowed:
 - 10 brl,usd:EUR,gbp
 
 ## Change Log
+
+### v1.4
+
+* Added a layer between clients and OpenExchangeRates to mitigate API usage
 
 ### v1.3
 
