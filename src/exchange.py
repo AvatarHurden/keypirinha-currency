@@ -113,7 +113,11 @@ class ExchangeRates():
             for destination in destinations:
                 rate = self.rate(destination) / self.rate(source)
                 convertedAmount = rate * amount
-                formatted = '{0:.8f}'.format(convertedAmount).rstrip('0').rstrip('.')
+                if amount == 1:
+                	formatted = '{:,.8f}'.format(convertedAmount).rstrip('0').rstrip('.')
+                else:
+                	formatted = '{:,.2f}'.format(convertedAmount).rstrip('0').rstrip('.')
+
                 result = {
                     'amount': convertedAmount,
                     'source': source,
