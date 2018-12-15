@@ -6,6 +6,7 @@ toPrint = None
 whitespace = regex(r'\s*')
 lexeme = lambda p: p << whitespace
 
+op = lambda p: lexeme(string(p))
 numberRegex = r'-?(0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?'
 number = lexeme(regex(numberRegex).map(float))
 
@@ -55,7 +56,20 @@ def mult_expr():
 
 @generate
 def exp_expr():
-    return (yield left_binary_parser({'^': operator.pow, '**': operator.pow}, operand))
+    return (yield left_binary_parser({'^': operator.pow, '**': operator.pow}, unary_expr))
+
+
+@generate
+def unary_expr():
+    @generate
+    def unary():
+        operation = yield op('-') | op('+')
+        value = yield unary_expr
+        if operation == '-':
+            return -value
+        else:
+            return value
+    return (yield operand | unary)
 
 
 @generate
