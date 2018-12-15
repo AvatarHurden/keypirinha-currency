@@ -4,6 +4,7 @@ import keypirinha as kp
 import keypirinha_util as kpu
 import keypirinha_net as kpnet
 
+from .parser import parser
 from .exchange import ExchangeRates, UpdateFreq
 
 import re
@@ -191,6 +192,8 @@ class Currency(kp.Plugin):
             query['terms'] = user_input.rstrip()
 
             symbolRegex = r'[a-zA-Z]{3}(,\s*[a-zA-Z]{3})*'
+
+            print(parser.parse(user_input))
 
             m = re.match(
                 (r"^(?P<amount>\d*([,.]\d+)?)?\s*" +
