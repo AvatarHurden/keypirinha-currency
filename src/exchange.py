@@ -57,12 +57,16 @@ class ExchangeRates():
 
     def update(self):
         try:
-            self._currencies, update_time = self.cheap_service.load_from_url()
-            self.last_update = datetime.now()
-            time_diff = self.last_update - datetime.fromtimestamp(update_time)
+            try:
+                self._currencies, update_time = self.cheap_service.load_from_url()
+                self.last_update = datetime.now()
+                time_diff = self.last_update - datetime.fromtimestamp(update_time)
 
-            if (time_diff.total_seconds() > 3600 * 2):
-                self.plugin.info('cache server is more than 2 hours old. Requesting from main API')
+                if (time_diff.total_seconds() > 3600 * 2):
+                    self.plugin.info('cache server is more than 2 hours old. Requesting from main API')
+                    self._currencies, update_time = self.expensive_service.load_from_url()
+            except Exception as e:
+                self.plugin.info('cache server has returned error. Requesting from main API')
                 self._currencies, update_time = self.expensive_service.load_from_url()
 
             self.save_to_file()
@@ -116,8 +120,7 @@ class ExchangeRates():
                 if amount == 1:
                 	formatted = '{:,.8f}'.format(convertedAmount).rstrip('0').rstrip('.')
                 else:
-                	formatted = '{:,.2f}'.format(convertedAmount).rstrip('0').rstrip('.')
-
+                	formatted = '{:,.2f}'.format(convertedAmount).rstrip('.')
                 result = {
                     'amount': convertedAmount,
                     'source': source,
