@@ -27,6 +27,33 @@ number = lexeme(regex(numberRegex).map(float))
 lparen = lexeme(string('('))
 rparen = lexeme(string(')'))
 
+math_symbols = '+-/*^()'
+to_keywords = ['to', 'in', ':']
+
+conversion = alt(*[s(keyword) for keyword in to_keywords])
+
+
+@generate
+def code():
+    @Parser
+    def code(stream, index):
+        origIndex = index
+        word = ''
+        while index < len(stream):
+            item = stream[index]
+            if item.isdigit() or item.isspace() or item in math_symbols:
+                break
+            word += item
+            index += 1
+        else:
+            return Result.success(index, word)
+
+        if word in to_keywords:
+            return Result.failure(origIndex, word + ' is a reserved keyword')
+        return Result.success(index, word)
+
+    return (yield lexeme(code))
+
 
 def left_binary_parser(operators, left):
     @generate
@@ -93,6 +120,5 @@ def operand():
 
 expression = add_expr
 
-code = lexeme(letter.many().concat())
 
 parser = expression
