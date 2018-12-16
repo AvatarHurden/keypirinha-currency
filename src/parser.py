@@ -20,13 +20,13 @@ import operator
 # unary_expr := operand | ('-' | '+') unary_expr
 # operand := number | '(' expr ')'
 #
-# number := -?(0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?
+# number := (0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?
 
 whitespace = regex(r'\s*')
 lexeme = lambda p: p << whitespace
 
 s = lambda p: lexeme(string(p))
-numberRegex = r'-?(0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?'
+numberRegex = r'(0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?'
 number = lexeme(regex(numberRegex).map(lambda x: x.replace(',', '.')).map(float))
 
 lparen = lexeme(string('('))
