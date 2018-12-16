@@ -8,14 +8,19 @@ import operator
 # to_key := 'to' | 'in' | ':'
 # cur_code := ([^0-9\s+-/*^()]+)\b(?<!to|in|:)
 #
-# sources := source (+-) sources | source
+# sources := source ('+' | '-')? sources | source
 # source := '(' source ')'
 #        | cur_code expr
 #        | expr (cur_code?)
 #
-# expr := math
-
-toPrint = None
+# expr := add_expr
+# add_expr := mult_expr | add_expr ('+' | '-') mult_expr
+# mult_expr := exp_expr | mult_expr ('*' | '/') exp_expr
+# exp_expr := unary_expr | exp_expr ('^' | '**') unary_expr
+# unary_expr := operand | ('-' | '+') unary_expr
+# operand := number | '(' expr ')'
+#
+# number := -?(0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?
 
 whitespace = regex(r'\s*')
 lexeme = lambda p: p << whitespace
@@ -86,6 +91,11 @@ def left_binary_parser(operators, left):
 
 
 @generate
+def expression():
+    return (yield add_expr)
+
+
+@generate
 def add_expr():
     return (yield left_binary_parser({'+': operator.add, '-': operator.sub}, mult_expr))
 
@@ -116,9 +126,6 @@ def unary_expr():
 @generate
 def operand():
     return (yield (number | (lparen >> expression << rparen)))
-
-
-expression = add_expr
 
 
 @generate
