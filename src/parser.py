@@ -20,9 +20,9 @@ toPrint = None
 whitespace = regex(r'\s*')
 lexeme = lambda p: p << whitespace
 
-op = lambda p: lexeme(string(p))
+s = lambda p: lexeme(string(p))
 numberRegex = r'-?(0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?'
-number = lexeme(regex(numberRegex).map(float))
+number = lexeme(regex(numberRegex).map(lambda x: x.replace(',', '.')).map(float))
 
 lparen = lexeme(string('('))
 rparen = lexeme(string(')'))
@@ -104,7 +104,7 @@ def exp_expr():
 def unary_expr():
     @generate
     def unary():
-        operation = yield op('-') | op('+')
+        operation = yield s('-') | s('+')
         value = yield unary_expr
         if operation == '-':
             return -value
