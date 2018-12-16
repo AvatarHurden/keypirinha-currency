@@ -1,6 +1,20 @@
 from .parsy import regex, letter, generate, alt, string
 import operator
 
+# Grammar
+#
+# prog := sources (to_key cur_code)?
+#
+# to_key := 'to' | 'in' | ':'
+# cur_code := ([^0-9\s+-/*^()]+)\b(?<!to|in|:)
+#
+# sources := source (+-) sources | source
+# source := '(' source ')'
+#        | cur_code expr
+#        | expr (cur_code?)
+#
+# expr := math
+
 toPrint = None
 
 whitespace = regex(r'\s*')
