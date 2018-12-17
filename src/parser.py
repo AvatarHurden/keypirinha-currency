@@ -3,10 +3,16 @@ import operator
 
 # Grammar
 #
-# prog := sources (to_key cur_code)?
+# prog := sources (to_key destinations)? extra?
 #
 # to_key := 'to' | 'in' | ':'
-# cur_code := ([^0-9\s+-/*^()]+)\b(?<!to|in|:)
+#
+# destinations := cur_code sep destinations | cur_code
+#
+# sep := ',' | '&' | 'and'
+# cur_code := ([^0-9\s+-/*^()]+,&:)\b(?<!to|in|:)
+#
+# extra := ('+' | '-') expr
 #
 # sources := source ('+' | '-')? sources | source
 # source := '(' source ')'
@@ -32,10 +38,12 @@ number = lexeme(regex(numberRegex).map(lambda x: x.replace(',', '.')).map(float)
 lparen = lexeme(string('('))
 rparen = lexeme(string(')'))
 
-math_symbols = '+-/*^()'
+math_symbols = '+-/*^(),&:'
 to_keywords = ['to', 'in', ':']
+sep_keywords = [',', '&', 'and']
 
-conversion = alt(*[s(keyword) for keyword in to_keywords])
+to_parser = alt(*[s(keyword) for keyword in to_keywords])
+sep_parser = alt(*[s(keyword) for keyword in sep_keywords])
 
 
 @generate
@@ -53,7 +61,7 @@ def code():
         else:
             return Result.success(index, word)
 
-        if word in to_keywords:
+        if word in to_keywords or word in sep_keywords:
             return Result.failure(origIndex, word + ' is a reserved keyword')
         return Result.success(index, word)
 
@@ -146,7 +154,24 @@ def sources():
 
 
 @generate
+def destinations():
+    first = yield lexeme(code)
+    rest = yield (sep_parser >> destinations).optional()
+    return [first] + (rest if rest else [])
+
+
+@generate
+def extra():
+    op = yield s('+') | s('-')
+    expr = yield expression
+    if op == '-':
+        expr = -expr
+    return expr
+
+
+@generate
 def parser():
-    sources2 = yield sources
-    destination = yield (conversion >> code).optional()
-    return (sources2, destination)
+    source = yield sources
+    destination = yield (to_parser >> destinations).optional()
+    extras = yield extra.optional()
+    return (source, destination, extras)
