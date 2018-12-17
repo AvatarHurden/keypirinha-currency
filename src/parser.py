@@ -1,4 +1,4 @@
-from .parsy import regex, generate, alt, string, test_char, seq, Parser, Result
+from .parsy import regex, generate, alt, string, seq, Parser, Result
 import operator
 
 # Grammar
@@ -140,7 +140,11 @@ def operand():
 def source():
     amount_first = seq(expression, code.optional())
     curr_first = seq(code, expression).map(lambda a: a[::-1])
-    return (yield alt(amount_first, curr_first, lparen >> source << rparen))
+    amount, currency = yield alt(amount_first, curr_first, lparen >> source << rparen)
+    return {
+        'amount': amount,
+        'currency': currency
+    }
 
 
 @generate
@@ -157,7 +161,7 @@ def sources():
 def destinations():
     first = yield lexeme(code)
     rest = yield (sep_parser >> destinations).optional()
-    return [first] + (rest if rest else [])
+    return [{'currency': first}] + (rest if rest else [])
 
 
 @generate
@@ -174,4 +178,8 @@ def parser():
     source = yield sources
     destination = yield (to_parser >> destinations).optional()
     extras = yield extra.optional()
-    return (source, destination, extras)
+    return {
+        'sources': source,
+        'destinations': destination,
+        'extra': extras
+    }
