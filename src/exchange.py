@@ -111,21 +111,23 @@ class ExchangeRates():
         lst = self.format_codes(codeString)
         return [x.upper() for x in lst if x.upper() in self._currencies.keys()]
 
-    def convert(self, amount, sources, destinations):
+    def convert(self, query):
         results = []
-        for source in sources:
-            for destination in destinations:
-                rate = self.rate(destination) / self.rate(source)
-                convertedAmount = rate * amount
-                if amount == 1:
-                	formatted = '{:,.8f}'.format(convertedAmount).rstrip('0').rstrip('.')
+        for destination in query['destinations']:
+            total = query['extra'] if query['extra'] else 0
+            for source in query['sources']:
+                rate = self.rate(destination['currency']) / self.rate(source['currency'])
+                convertedAmount = rate * source['amount']
+                total += convertedAmount
+                if source['amount'] == 1:
+                    formatted = '{:,.8f}'.format(convertedAmount).rstrip('0').rstrip('.')
                 else:
-                	formatted = '{:,.2f}'.format(convertedAmount).rstrip('.')
-                result = {
-                    'amount': convertedAmount,
-                    'source': source,
-                    'destination': destination,
-                    'title': formatted + ' ' + destination
-                }
-                results.append(result)
+                    formatted = '{:,.2f}'.format(convertedAmount).rstrip('.')
+            result = {
+                'amount': total,
+                'source': source['currency'],
+                'destination': destination['currency'],
+                'title': '{}'.format(total) + ' ' + destination['currency']
+            }
+            results.append(result)
         return results

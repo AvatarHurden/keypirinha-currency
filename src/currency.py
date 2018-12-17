@@ -5,6 +5,7 @@ import keypirinha_util as kpu
 import keypirinha_net as kpnet
 
 from .parser import parser
+from .parsy import ParseError
 from .exchange import ExchangeRates, UpdateFreq
 
 import re
@@ -107,14 +108,15 @@ class Currency(kp.Plugin):
             if not self.always_evaluate:
                 return
             query = self._parse_and_merge_input(user_input, True)
-            if 'from_cur' not in query and 'to_cur' not in query:
+            if 'destinations' not in query and 'sources' not in query:
                 return
 
         if self.should_terminate(0.25):
             return
         try:
             query = self._parse_and_merge_input(user_input)
-            if not query['from_cur'] or not query['to_cur'] or not user_input:
+            self.info(query)
+            if not query['destinations'] or not query['sources']:
                 return
 
             if self.broker.tryUpdate():
@@ -125,7 +127,7 @@ class Currency(kp.Plugin):
                     label=user_input,
                     short_desc="Webservice failed ({})".format(self.broker.error)))
             else:
-                results = self.broker.convert(query['amount'], query['from_cur'], query['to_cur'])
+                results = self.broker.convert(query)
 
                 for result in results:
                     suggestions.append(self._create_result_item(
@@ -179,40 +181,23 @@ class Currency(kp.Plugin):
             query = {}
         else:
             query = {
-                'from_cur': self.default_cur_in,
-                'to_cur': self.default_cur_out,
-                'amount': 1
+                'sources': [{'currency': cur, 'amount': 1.0} for cur in self.default_cur_in],
+                'destinations': [{'currency': cur} for cur in self.default_cur_out],
+                'extra': None
             }
 
-        # parse user input
-        # * supported formats:
-        #     <amount> [[from_cur][( to | in |:)to_cur]]
-        if user_input:
-            user_input = user_input.lstrip()
-            query['terms'] = user_input.rstrip()
+        if not user_input:
+            return query
 
-            symbolRegex = r'[a-zA-Z]{3}(,\s*[a-zA-Z]{3})*'
+        user_input = user_input.lstrip()
 
-            print(parser.parse(user_input))
-
-            m = re.match(
-                (r"^(?P<amount>\d*([,.]\d+)?)?\s*" +
-                    r"(?P<from_cur>" + symbolRegex + ")?\s*" +
-                    r"(( to | in |:)\s*(?P<to_cur>" + symbolRegex +"))?$"),
-                user_input)
-
-            if m:
-                if m.group('from_cur'):
-                    from_cur = self.broker.validate_codes(m.group('from_cur'))
-                    if from_cur:
-                        query['from_cur'] = from_cur
-                if m.group('to_cur'):
-                    to_cur = self.broker.validate_codes(m.group('to_cur'))
-                    if to_cur:
-                        query['to_cur'] = to_cur
-                if m.group('amount'):
-                    query['amount'] = float(m.group('amount').rstrip().replace(',', '.'))
-        return query
+        try:
+            parsed = parser.parse(user_input)
+            if not parsed['destinations'] and 'destinations' in query:
+                parsed['destinations'] = query['destinations']
+            return parsed
+        except ParseError as e:
+            return query
 
     def _update_update_item(self):
         self.merge_catalog([self.create_item(
