@@ -6,6 +6,14 @@ import json
 import os
 
 
+class CurrencyError(RuntimeError):
+    def __init__(self, currency):
+        self.currency = currency
+
+    def __str__(self):
+        return 'Unrecognized currency "{}"'.format(self.currency)
+
+
 class UpdateFreq(Enum):
     NEVER = 'never'
     HOURLY = 'hourly'
@@ -117,12 +125,24 @@ class ExchangeRates():
         lst = self.format_codes(codeString)
         return [x.upper() for x in lst if x.upper() in self._currencies.keys()]
 
+    def validate_code(self, codeString, raiseOnNone=False):
+        if codeString is None:
+            if raiseOnNone:
+                raise CurrencyError(None)
+            return self.default_cur_in
+        elif codeString.upper() in self._currencies.keys():
+            return codeString.upper()
+        else:
+            raise CurrencyError(codeString)
+
     def convert(self, query):
         results = []
         for destination in query['destinations']:
+            destinationCode = self.validate_code(destination['currency'], True)
             total = query['extra'] if query['extra'] else 0
             for source in query['sources']:
-                rate = self.rate(destination['currency']) / self.rate(source['currency'])
+                sourceCode = self.validate_code(source['currency'])
+                rate = self.rate(destinationCode) / self.rate(sourceCode)
                 convertedAmount = rate * source['amount']
                 total += convertedAmount
                 if source['amount'] == 1:
@@ -131,9 +151,9 @@ class ExchangeRates():
                     formatted = '{:,.2f}'.format(convertedAmount).rstrip('.')
             result = {
                 'amount': total,
-                'source': source['currency'],
+                'source': sourceCode,
                 'destination': destination['currency'],
-                'title': '{}'.format(total) + ' ' + destination['currency']
+                'title': '{}'.format(total) + ' ' + destinationCode
             }
             results.append(result)
         return results
