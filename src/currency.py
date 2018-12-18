@@ -2,18 +2,11 @@
 
 import keypirinha as kp
 import keypirinha_util as kpu
-import keypirinha_net as kpnet
 
 from .parser import parser
 from .parsy import ParseError
 from .exchange import ExchangeRates, UpdateFreq
 
-import re
-import json
-import traceback
-import urllib.error
-import urllib.parse
-from html.parser import HTMLParser
 
 class Currency(kp.Plugin):
     """
@@ -55,15 +48,11 @@ class Currency(kp.Plugin):
     DEFAULT_UPDATE_FREQ = 'daily'
     DEFAULT_ALWAYS_EVALUATE = True
     DEFAULT_ITEM_LABEL = 'Convert Currency'
-    DEFAULT_CUR_IN = 'USD'
-    DEFAULT_CUR_OUT = 'EUR, GBP'
 
     default_item_enabled = DEFAULT_ITEM_ENABLED
     update_freq = UpdateFreq(DEFAULT_UPDATE_FREQ)
     always_evaluate = DEFAULT_ALWAYS_EVALUATE
     default_item_label = DEFAULT_ITEM_LABEL
-    default_cur_in = DEFAULT_CUR_IN
-    default_cur_out = DEFAULT_CUR_OUT
 
     ACTION_COPY_RESULT = 'copy_result'
     ACTION_COPY_AMOUNT = 'copy_amount'
@@ -181,8 +170,8 @@ class Currency(kp.Plugin):
             query = {}
         else:
             query = {
-                'sources': [{'currency': cur, 'amount': 1.0} for cur in self.default_cur_in],
-                'destinations': [{'currency': cur} for cur in self.default_cur_out],
+                'sources': [{'currency': cur, 'amount': 1.0} for cur in self.broker.default_curs_in],
+                'destinations': [{'currency': cur} for cur in self.broker.default_curs_out],
                 'extra': None
             }
 
@@ -216,7 +205,7 @@ class Currency(kp.Plugin):
             else:
                 return ', '.join(lst[:-1]) + ' and ' + lst[-1]
 
-        desc = 'Convert from {} to {}'.format(joinCur(self.default_cur_in), joinCur(self.default_cur_out))
+        desc = 'Convert from {} to {}'.format(joinCur(self.broker.default_curs_in), joinCur(self.broker.default_curs_out))
 
         return self.create_item(
             category=self.ITEMCAT_CONVERT,
@@ -275,24 +264,18 @@ class Currency(kp.Plugin):
         input_code = settings.get_stripped(
             "input_cur",
             section=self.DEFAULT_SECTION,
-            fallback=self.DEFAULT_CUR_IN)
-        validated_input_code = self.broker.validate_codes(input_code)
+            fallback=self.broker.in_cur_fallback)
+        validated_input_code = self.broker.set_default_curs_in(input_code)
 
         if not validated_input_code:
-            _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
-            self.default_cur_in = self.broker.format_codes(self.DEFAULT_CUR_IN)
-        else:
-            self.default_cur_in = validated_input_code
+            _warn_cur_code("input_cur", self.broker.default_curs_in)
 
         # default output currency
         output_code = settings.get_stripped(
             "output_cur",
             section=self.DEFAULT_SECTION,
-            fallback=self.DEFAULT_CUR_OUT)
-        validated_output_code = self.broker.validate_codes(output_code)
+            fallback=self.broker.out_cur_fallback)
+        validated_output_code = self.broker.set_default_curs_out(output_code)
 
         if not validated_output_code:
-            _warn_cur_code("output_cur", self.DEFAULT_CUR_OUT)
-            self.default_cur_out = self.broker.format_codes(self.DEFAULT_CUR_OUT)
-        else:
-            self.default_cur_out = validated_output_code
+            _warn_cur_code("output_cur", self.broker.default_curs_out)

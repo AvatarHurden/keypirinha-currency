@@ -19,6 +19,12 @@ class ExchangeRates():
     update_freq = None
     _currencies = {}
 
+    in_cur_fallback = 'USD'
+    out_cur_fallback = 'EUR, GBP'
+
+    default_curs_in = ['USD']
+    default_curs_out = ['EUR', 'GBP']
+
     error = None
 
     def __init__(self, path, update_freq, plugin):
@@ -131,3 +137,20 @@ class ExchangeRates():
             }
             results.append(result)
         return results
+
+    def _set_default_curs(self, string, isIn):
+        lst = [x.strip() for x in string.split(',')]
+        curs = [x.upper() for x in lst if x.upper() in self._currencies.keys()]
+        if len(lst) != len(curs):
+            return False
+        if isIn:
+            self.default_curs_in = curs
+        else:
+            self.default_curs_out = curs
+        return True
+
+    def set_default_curs_in(self, string):
+        return self._set_default_curs(string, True)
+
+    def set_default_curs_out(self, string):
+        return self._set_default_curs(string, False)
