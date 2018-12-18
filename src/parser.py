@@ -59,7 +59,10 @@ def code():
             word += item
             index += 1
         else:
-            return Result.success(index, word)
+            if origIndex == index:
+                return Result.failure(index, 'empty word')
+            else:
+                return Result.success(index, word)
 
         if word in to_keywords or word in sep_keywords:
             return Result.failure(origIndex, word + ' is a reserved keyword')
