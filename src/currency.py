@@ -170,7 +170,7 @@ class Currency(kp.Plugin):
             query = {}
         else:
             query = {
-                'sources': [{'currency': cur, 'amount': 1.0} for cur in self.broker.default_curs_in],
+                'sources': [{'currency': self.broker.default_cur_in, 'amount': 1.0}],
                 'destinations': [{'currency': cur} for cur in self.broker.default_curs_out],
                 'extra': None
             }
@@ -205,7 +205,7 @@ class Currency(kp.Plugin):
             else:
                 return ', '.join(lst[:-1]) + ' and ' + lst[-1]
 
-        desc = 'Convert from {} to {}'.format(joinCur(self.broker.default_curs_in), joinCur(self.broker.default_curs_out))
+        desc = 'Convert from {} to {}'.format(self.broker.default_cur_in, joinCur(self.broker.default_curs_out))
 
         return self.create_item(
             category=self.ITEMCAT_CONVERT,
@@ -265,10 +265,10 @@ class Currency(kp.Plugin):
             "input_cur",
             section=self.DEFAULT_SECTION,
             fallback=self.broker.in_cur_fallback)
-        validated_input_code = self.broker.set_default_curs_in(input_code)
+        validated_input_code = self.broker.set_default_cur_in(input_code)
 
         if not validated_input_code:
-            _warn_cur_code("input_cur", self.broker.default_curs_in)
+            _warn_cur_code("input_cur", self.broker.default_cur_in)
 
         # default output currency
         output_code = settings.get_stripped(

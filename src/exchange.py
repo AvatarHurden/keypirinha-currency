@@ -22,7 +22,7 @@ class ExchangeRates():
     in_cur_fallback = 'USD'
     out_cur_fallback = 'EUR, GBP'
 
-    default_curs_in = ['USD']
+    default_cur_in = 'USD'
     default_curs_out = ['EUR', 'GBP']
 
     error = None
@@ -138,19 +138,18 @@ class ExchangeRates():
             results.append(result)
         return results
 
-    def _set_default_curs(self, string, isIn):
+    def set_default_cur_in(self, string):
+        code = string.upper()
+        if code in self._currencies.keys():
+            self.default_cur_in = code
+            return True
+        else:
+            return False
+
+    def set_default_curs_out(self, string):
         lst = [x.strip() for x in string.split(',')]
         curs = [x.upper() for x in lst if x.upper() in self._currencies.keys()]
         if len(lst) != len(curs):
             return False
-        if isIn:
-            self.default_curs_in = curs
-        else:
-            self.default_curs_out = curs
+        self.default_curs_out = curs
         return True
-
-    def set_default_curs_in(self, string):
-        return self._set_default_curs(string, True)
-
-    def set_default_curs_out(self, string):
-        return self._set_default_curs(string, False)
