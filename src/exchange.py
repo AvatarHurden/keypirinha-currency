@@ -135,25 +135,38 @@ class ExchangeRates():
         else:
             raise CurrencyError(codeString)
 
+    def format_number(self, number, fullDigits=False):
+        if fullDigits:
+            formatted = '{:,.8f}'.format(number).rstrip('0').rstrip('.')
+        else:
+            formatted = '{:,.2f}'.format(number).rstrip('.')
+        return formatted
+
     def convert(self, query):
         results = []
         for destination in query['destinations']:
             destinationCode = self.validate_code(destination['currency'], True)
             total = query['extra'] if query['extra'] else 0
-            for source in query['sources']:
+            srcDescription = ''
+            for index, source in enumerate(query['sources']):
                 sourceCode = self.validate_code(source['currency'])
                 rate = self.rate(destinationCode) / self.rate(sourceCode)
-                convertedAmount = rate * source['amount']
+                amount = source['amount']
+                convertedAmount = rate * amount
                 total += convertedAmount
-                if source['amount'] == 1:
-                    formatted = '{:,.8f}'.format(convertedAmount).rstrip('0').rstrip('.')
-                else:
-                    formatted = '{:,.2f}'.format(convertedAmount).rstrip('.')
+                if amount < 0 or index > 0:
+                    srcDescription += ' - ' if amount < 0 else ' + '
+                srcDescription += '{} {}'.format(self.format_number(abs(amount)),
+                                                 sourceCode)
+
+            fullDigits = len(query['sources']) == 1 and \
+                query['sources'][0]['amount'] == 1
+
+            formatted_total = self.format_number(total, fullDigits)
             result = {
                 'amount': total,
-                'source': sourceCode,
-                'destination': destination['currency'],
-                'title': '{}'.format(total) + ' ' + destinationCode
+                'description': srcDescription,
+                'title': '{}'.format(formatted_total + ' ' + destinationCode)
             }
             results.append(result)
         return results

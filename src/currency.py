@@ -121,7 +121,7 @@ class Currency(kp.Plugin):
                 for result in results:
                     suggestions.append(self._create_result_item(
                         label=result['title'],
-                        short_desc= result['source'] + ' to ' + result['destination'],
+                        short_desc=result['description'],
                         target=result['title']
                     ))
         except Exception as exc:
