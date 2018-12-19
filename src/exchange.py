@@ -151,7 +151,7 @@ class ExchangeRates():
             for index, source in enumerate(query['sources']):
                 sourceCode = self.validate_code(source['currency'])
                 rate = self.rate(destinationCode) / self.rate(sourceCode)
-                amount = source['amount']
+                amount = source['amount'] if source['amount'] else 1
                 convertedAmount = rate * amount
                 total += convertedAmount
                 if amount < 0 or index > 0:
@@ -160,7 +160,7 @@ class ExchangeRates():
                                                  sourceCode)
 
             fullDigits = len(query['sources']) == 1 and \
-                query['sources'][0]['amount'] == 1
+                (query['sources'][0]['amount'] or 1) == 1
 
             formatted_total = self.format_number(total, fullDigits)
             result = {
