@@ -37,6 +37,7 @@ class ParserProperties(object):
     def __init__(self):
         pass
 
+
 def make_parser(properties):
     whitespace = regex(r'\s*')
     lexeme = lambda p: p << whitespace
@@ -70,13 +71,13 @@ def make_parser(properties):
                 index += 1
             else:
                 if len(word) == 0:
-                    return Result.failure(index, 'empty word')
+                    return Result.failure(index, 'currency code')
                 return Result.success(index, word)
 
             if len(word) == 0:
-                return Result.failure(index, 'empty word')
+                return Result.failure(index, 'currency code')
 
-            if word in to_keywords or word in sep_keywords:
+            if word in properties.to_keywords or word in properties.sep_keywords:
                 return Result.failure(origIndex, word + ' is a reserved keyword')
             return Result.success(index, word)
 
