@@ -44,7 +44,9 @@ def make_parser(properties):
 
     s = lambda p: lexeme(string(p))
     numberRegex = r'(0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?'
-    number = lexeme(regex(numberRegex).map(lambda x: x.replace(',', '.')).map(float))
+    number = lexeme(regex(numberRegex)
+                    .map(lambda x: x.replace(',', '.'))
+                    .map(float).desc('a number'))
 
     lparen = lexeme(string('('))
     rparen = lexeme(string(')'))
