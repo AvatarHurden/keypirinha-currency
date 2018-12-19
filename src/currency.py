@@ -3,7 +3,7 @@
 import keypirinha as kp
 import keypirinha_util as kpu
 
-from .parser import parser
+from .parser import make_parser, ParserProperties
 from .parsy import ParseError
 from .exchange import ExchangeRates, UpdateFreq
 
@@ -48,6 +48,8 @@ class Currency(kp.Plugin):
     DEFAULT_UPDATE_FREQ = 'daily'
     DEFAULT_ALWAYS_EVALUATE = True
     DEFAULT_ITEM_LABEL = 'Convert Currency'
+    DEFAULT_SEPARATORS = 'to, in, :'
+    DEFAULT_DESTINATION_SEPARATORS = 'and; &, ,'
 
     default_item_enabled = DEFAULT_ITEM_ENABLED
     update_freq = UpdateFreq(DEFAULT_UPDATE_FREQ)
@@ -186,7 +188,7 @@ class Currency(kp.Plugin):
         user_input = user_input.lstrip()
 
         try:
-            parsed = parser.parse(user_input)
+            parsed = self.parser.parse(user_input)
             if not parsed['destinations'] and 'destinations' in query:
                 parsed['destinations'] = query['destinations']
             return parsed
@@ -284,3 +286,22 @@ class Currency(kp.Plugin):
 
         if not validated_output_code:
             _warn_cur_code("output_cur", self.broker.default_curs_out)
+
+        # separators
+        separators_string = settings.get_stripped(
+            "separators",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_SEPARATORS)
+        separators = [sep.strip() for sep in separators_string.split(',')]
+
+        # destination_separators
+        dest_seps_string = settings.get_stripped(
+            "destination_separators",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_DESTINATION_SEPARATORS)
+        dest_separators = [sep.strip() for sep in dest_seps_string.split(';')]
+
+        properties = ParserProperties()
+        properties.to_keywords = separators
+        properties.sep_keywords = dest_separators
+        self.parser = make_parser(properties)
