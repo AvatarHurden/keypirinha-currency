@@ -93,19 +93,24 @@ class Currency(kp.Plugin):
         if items_chain and items_chain[-1].category() == self.ITEMCAT_RESULT:
             self.set_suggestions(items_chain, kp.Match.ANY, kp.Sort.NONE)
             return
+        # This is at top level
         if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
             if not self.always_evaluate:
                 return
-            query = self._parse_and_merge_input(user_input, True)
-            if 'destinations' not in query and 'sources' not in query:
+            try:
+                query = self._parse_and_merge_input(user_input, True)
+            except Exception:
+                return
+            if ('destinations' not in query or query['destinations'] is None) and \
+                (query['sources'] is None or len(query['sources']) == 0
+                    or query['sources'][0]['currency'] is None):
                 return
 
         if self.should_terminate(0.25):
             return
         try:
             query = self._parse_and_merge_input(user_input)
-            self.info(query)
-            if not query['destinations'] or not query['sources']:
+            if query['destinations'] is None or query['sources'] is None:
                 return
 
             if self.broker.tryUpdate():

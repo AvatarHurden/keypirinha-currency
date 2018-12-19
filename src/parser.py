@@ -59,6 +59,8 @@ def code():
             word += item
             index += 1
         else:
+            if len(word) == 0:
+                return Result.failure(index, 'empty word')
             return Result.success(index, word)
 
         if len(word) == 0:
