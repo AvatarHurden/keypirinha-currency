@@ -158,7 +158,7 @@ def sources():
     op = yield (s('+') | s('-')).optional()
     rest = yield sources.optional()
     if op == '-' and rest:
-        rest[0][0] *= -1
+        rest[0]['amount'] *= -1
     return [first] + (rest if rest else [])
 
 
