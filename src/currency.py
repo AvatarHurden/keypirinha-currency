@@ -101,11 +101,13 @@ class Currency(kp.Plugin):
                 return
             try:
                 query = self._parse_and_merge_input(user_input, True)
-            except Exception:
-                return
-            if ('destinations' not in query or query['destinations'] is None) and \
-                (query['sources'] is None or len(query['sources']) == 0
-                    or query['sources'][0]['currency'] is None):
+                # This tests whether the user entered enough information to
+                # indicate a currency conversion request.
+                if not self._is_direct_request(query):
+                    return
+                # if the conversion would have failed, return now
+                self.broker.convert(self._parse_and_merge_input(user_input))
+            except Exception as e:
                 return
 
         if self.should_terminate(0.25):
@@ -171,6 +173,15 @@ class Currency(kp.Plugin):
                     kp.Events.NETOPTIONS):
             self._read_config()
             self.on_catalog()
+
+    def _is_direct_request(self, query):
+        entered_dest = ('destinations' in query and
+                        query['destinations'] is not None)
+        entered_source = (query['sources'] is not None and
+                          len(query['sources']) > 0 and
+                          query['sources'][0]['currency'] is not None)
+
+        return entered_dest or entered_source
 
     def _parse_and_merge_input(self, user_input=None, empty=False):
         if empty:
@@ -260,7 +271,7 @@ class Currency(kp.Plugin):
             'update_freq',
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_UPDATE_FREQ,
-            enum = [freq.value for freq in UpdateFreq]
+            enum=[freq.value for freq in UpdateFreq]
         )
         self.update_freq = UpdateFreq(update_freq_string)
 
