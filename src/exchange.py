@@ -6,6 +6,14 @@ import json
 import os
 
 
+class CurrencyError(RuntimeError):
+    def __init__(self, currency):
+        self.currency = currency
+
+    def __str__(self):
+        return 'Unrecognized currency "{}"'.format(self.currency)
+
+
 class UpdateFreq(Enum):
     NEVER = 'never'
     HOURLY = 'hourly'
@@ -18,6 +26,12 @@ class ExchangeRates():
     last_update = None
     update_freq = None
     _currencies = {}
+
+    in_cur_fallback = 'USD'
+    out_cur_fallback = 'EUR, GBP'
+
+    default_cur_in = 'USD'
+    default_curs_out = ['EUR', 'GBP']
 
     error = None
 
@@ -57,12 +71,16 @@ class ExchangeRates():
 
     def update(self):
         try:
-            self._currencies, update_time = self.cheap_service.load_from_url()
-            self.last_update = datetime.now()
-            time_diff = self.last_update - datetime.fromtimestamp(update_time)
+            try:
+                self._currencies, update_time = self.cheap_service.load_from_url()
+                self.last_update = datetime.now()
+                time_diff = self.last_update - datetime.fromtimestamp(update_time)
 
-            if (time_diff.total_seconds() > 3600 * 2):
-                self.plugin.info('cache server is more than 2 hours old. Requesting from main API')
+                if (time_diff.total_seconds() > 3600 * 2):
+                    self.plugin.info('cache server is more than 2 hours old. Requesting from main API')
+                    self._currencies, update_time = self.expensive_service.load_from_url()
+            except Exception as e:
+                self.plugin.info('cache server has returned error. Requesting from main API')
                 self._currencies, update_time = self.expensive_service.load_from_url()
 
             self.save_to_file()
@@ -107,22 +125,64 @@ class ExchangeRates():
         lst = self.format_codes(codeString)
         return [x.upper() for x in lst if x.upper() in self._currencies.keys()]
 
-    def convert(self, amount, sources, destinations):
-        results = []
-        for source in sources:
-            for destination in destinations:
-                rate = self.rate(destination) / self.rate(source)
-                convertedAmount = rate * amount
-                if amount == 1:
-                	formatted = '{:,.8f}'.format(convertedAmount).rstrip('0').rstrip('.')
-                else:
-                	formatted = '{:,.2f}'.format(convertedAmount).rstrip('0').rstrip('.')
+    def validate_code(self, codeString, raiseOnNone=False):
+        if codeString is None:
+            if raiseOnNone:
+                raise CurrencyError(None)
+            return self.default_cur_in
+        elif codeString.upper() in self._currencies.keys():
+            return codeString.upper()
+        else:
+            raise CurrencyError(codeString)
 
-                result = {
-                    'amount': convertedAmount,
-                    'source': source,
-                    'destination': destination,
-                    'title': formatted + ' ' + destination
-                }
-                results.append(result)
+    def format_number(self, number, fullDigits=False):
+        if fullDigits:
+            formatted = '{:,.8f}'.format(number).rstrip('0').rstrip('.')
+        else:
+            formatted = '{:,.2f}'.format(number).rstrip('.')
+        return formatted
+
+    def convert(self, query):
+        results = []
+        for destination in query['destinations']:
+            destinationCode = self.validate_code(destination['currency'], True)
+            total = query['extra'] if query['extra'] else 0
+            srcDescription = ''
+            for index, source in enumerate(query['sources']):
+                sourceCode = self.validate_code(source['currency'])
+                rate = self.rate(destinationCode) / self.rate(sourceCode)
+                amount = source['amount'] if source['amount'] else 1
+                convertedAmount = rate * amount
+                total += convertedAmount
+                if amount < 0 or index > 0:
+                    srcDescription += ' - ' if amount < 0 else ' + '
+                srcDescription += '{} {}'.format(self.format_number(abs(amount)),
+                                                 sourceCode)
+
+            fullDigits = len(query['sources']) == 1 and \
+                (query['sources'][0]['amount'] or 1) == 1
+
+            formatted_total = self.format_number(total, fullDigits)
+            result = {
+                'amount': total,
+                'description': srcDescription,
+                'title': '{}'.format(formatted_total + ' ' + destinationCode)
+            }
+            results.append(result)
         return results
+
+    def set_default_cur_in(self, string):
+        code = string.upper()
+        if code in self._currencies.keys():
+            self.default_cur_in = code
+            return True
+        else:
+            return False
+
+    def set_default_curs_out(self, string):
+        lst = [x.strip() for x in string.split(',')]
+        curs = [x.upper() for x in lst if x.upper() in self._currencies.keys()]
+        if len(lst) != len(curs):
+            return False
+        self.default_curs_out = curs
+        return True
