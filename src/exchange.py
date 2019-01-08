@@ -12,7 +12,7 @@ class CurrencyError(RuntimeError):
         self.currency = currency
 
     def __str__(self):
-        return 'Unrecognized currency "{}"'.format(self.currency)
+        return 'Unrecognized currency "{}". You can create aliases in the package configuration file.'.format(self.currency)
 
 
 class UpdateFreq(Enum):
