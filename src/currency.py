@@ -5,7 +5,7 @@ import keypirinha_util as kpu
 
 from .parser import make_parser, ParserProperties
 from .parsy import ParseError
-from .exchange import ExchangeRates, UpdateFreq
+from .exchange import ExchangeRates, UpdateFreq, CurrencyError
 
 
 class Currency(kp.Plugin):
@@ -43,6 +43,7 @@ class Currency(kp.Plugin):
     ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 3
 
     DEFAULT_SECTION = 'defaults'
+    ALIAS_SECTION = 'aliases'
 
     DEFAULT_ITEM_ENABLED = True
     DEFAULT_UPDATE_FREQ = 'daily'
@@ -311,6 +312,27 @@ class Currency(kp.Plugin):
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_DESTINATION_SEPARATORS)
         dest_separators = [sep.strip() for sep in dest_seps_string.split(';')]
+
+        # aliases
+        keys = settings.keys(self.ALIAS_SECTION)
+        for key in keys:
+            try:
+                validatedKey = self.broker.validate_code(key)
+                aliases = settings.get_stripped(
+                    key,
+                    section=self.ALIAS_SECTION,
+                    fallback=''
+                ).split()
+                for alias in aliases:
+                    validated = self.broker.validate_alias(alias)
+                    if validated:
+                        self.broker.add_alias(validated, validatedKey)
+                    else:
+                        fmt = 'Alias {} is invalid. It will be ignored'
+                        self.warn(fmt.format(alias))
+            except Exception:
+                fmt = 'Key {} is not a valid currency. It will be ignored'
+                self.warn(fmt.format(key))
 
         properties = ParserProperties()
         properties.to_keywords = separators
