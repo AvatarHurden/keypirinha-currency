@@ -195,7 +195,7 @@ class ExchangeRates():
             return False
 
     def set_default_curs_out(self, string):
-        lst = [x.strip() for x in string.split(',')]
+        lst = string.split()
         curs = [x.upper() for x in lst if x.upper() in self._currencies.keys()]
         if len(lst) != len(curs):
             return False

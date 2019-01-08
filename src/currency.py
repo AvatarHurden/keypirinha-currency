@@ -304,14 +304,14 @@ class Currency(kp.Plugin):
             "separators",
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_SEPARATORS)
-        separators = [sep.strip() for sep in separators_string.split(',')]
+        separators = separators_string.split()
 
         # destination_separators
         dest_seps_string = settings.get_stripped(
             "destination_separators",
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_DESTINATION_SEPARATORS)
-        dest_separators = [sep.strip() for sep in dest_seps_string.split(';')]
+        dest_separators = dest_seps_string.split()
 
         # aliases
         keys = settings.keys(self.ALIAS_SECTION)
