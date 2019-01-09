@@ -10,7 +10,7 @@ import operator
 # destinations := cur_code sep destinations | cur_code
 #
 # sep := ',' | '&' | 'and'
-# cur_code := ([^0-9\s+-/*^()]+,&:)\b(?<!to|in|:)
+# cur_code := ([^0-9\s+-/*^()]+)\b(?<!to|in|:)
 #
 # extra := ('+' | '-') expr
 #
