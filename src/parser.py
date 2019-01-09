@@ -150,11 +150,12 @@ def make_parser(properties):
     def source():
         amount_first = seq(expression, code.optional())
         curr_first = seq(code, expression.optional()).map(lambda a: a[::-1])
-        amount, currency = yield alt(amount_first, curr_first, lparen >> source << rparen)
-        return {
-            'amount': amount,
-            'currency': currency
-        }
+        pure = (amount_first | curr_first).map(lambda a : {
+            'amount': a[0],
+            'currency': a[1]
+        })
+        ret = yield pure | lparen >> source << rparen
+        return ret
 
     @generate
     def sources():
