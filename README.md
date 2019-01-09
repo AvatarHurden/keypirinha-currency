@@ -21,16 +21,16 @@ move it to the `InstalledPackage` folder located at:
 
 ## Usage
 
-A ```Convert Currency``` item is inserted into the catalog.
+A `Convert Currency` item is inserted into the catalog.
 Select this item to enter conversion mode.
 
-For the most basic usage, simply enter the amount to convert, the source currency and the destination currency, such as ```5 USD in EUR```.
-You can perform mathematical operations for the source amount, such as ```10*(2+1) usd in EUR```, and you can even perform some math on the resulting amount ```5 usd in EUR / 2```.
+For the most basic usage, simply enter the amount to convert, the source currency and the destination currency, such as `5 USD in EUR`.
+You can perform mathematical operations for the source amount, such as `10*(2+1) usd in EUR`, and you can even perform some math on the resulting amount `5 usd in EUR / 2`.
 
-Furthermore, you can add (or subtract) multiple currencies together, such as ```5 USD + 2 GBP in EUR```.
-You can also convert into multiple destination currencies, such as ```5 USD in EUR, GBP```, and each conversion will be displayed as a separate result.
+Furthermore, you can add (or subtract) multiple currencies together, such as `5 USD + 2 GBP in EUR`.
+You can also convert into multiple destination currencies, such as `5 USD in EUR, GBP`, and each conversion will be displayed as a separate result.
 
-If you omit the name of a currency, such as in ```5 USD``` or ```5 in USD```, the plugin will use the default currencies specified in the configuration file.
+If you omit the name of a currency, such as in `5 USD` or `5 in USD`, the plugin will use the default currencies specified in the configuration file.
 You can also change what words and symbols are used between multiple destination currencies and between the source and destination.
 
 ### Aliases
@@ -38,16 +38,17 @@ You can also change what words and symbols are used between multiple destination
 By default, the plugin operates only on [ISO currency codes](https://pt.wikipedia.org/wiki/ISO_4217) (and a few others).
 However, there is support for *aliases*, which are alternative names for currencies.
 In the configuration file, the user can specify as many aliases as they desire for any currency (for instance, `dollar` and `dollars` for USD).
+Aliases, just like regular currency codes, are case-insensitive (i.e. `EuR`, `EUR` and `eur` are all treated the same).
 
 
 ### Math
 
-The available mathematical operations are addition (```+```), subtraction (```-```), multiplication (```*```), division (```/```) and exponentiaion (```**``` or ```^```).
-You can also use parentheses and the negative operator (```-(3 + 4) * 4```, for example).
+The available mathematical operations are addition (`+`), subtraction (`-`), multiplication (`*`), division (`/`) and exponentiation (`**` or `^`).
+You can also use parentheses and the negative operator (`-(3 + 4) * 4`, for example).
 
 ### Grammar
 
-For those familiar with BNF grammars and regex, below is grammar accepted by the parser (```prog``` is the top-level expression):
+For those familiar with BNF grammars and regex, below is grammar accepted by the parser (`prog` is the top-level expression):
 
 ```
 prog := sources (to_key destinations)? extra?
@@ -60,7 +61,7 @@ sep := ',' | '&' | 'and'
 cur_code := ([^0-9\s+-/*^()]+)
   # excluding any words that are used as 'sep' or 'to_key'
 
-extra := ('+' | '-') expr
+extra := ('+' | '-' | '*' | '/' | '**' | '^' ) expr
 
 sources := source ('+' | '-')? sources | source
 source := '(' source ')'
