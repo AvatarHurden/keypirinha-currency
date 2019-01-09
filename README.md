@@ -21,28 +21,73 @@ move it to the `InstalledPackage` folder located at:
 
 ## Usage
 
-A ```Convert Currency``` item is inserted into the catalog.
+A `Convert Currency` item is inserted into the catalog.
 Select this item to enter conversion mode.
 
-Enter the amount to convert, the source currency code and the destination currency code.
-If either the source or destination currency are omitted, the defaults are used.
-If the amount is omitted, the current exchange rate is shown.
+For the most basic usage, simply enter the amount to convert, the source currency and the destination currency, such as `5 USD in EUR`.
+You can perform mathematical operations for the source amount, such as `10*(2+1) usd in EUR`, and you can even perform some math on the resulting amount `5 usd in EUR / 2`.
 
-*Currency* allows the source and destination currencies to be separated by any of the following:
- - in
- - to
- - :
+Furthermore, you can add (or subtract) multiple currencies together, such as `5 USD + 2 GBP in EUR`.
+You can also convert into multiple destination currencies, such as `5 USD in EUR, GBP`, and each conversion will be displayed as a separate result.
 
-To convert between multiple currencies at the same time, separate each one by a comma.
-This can be done in either the source or destination field, and all combinations will be displayed in the results.
+If you omit the name of a currency, such as in `5 USD` or `5 in USD`, the plugin will use the default currencies specified in the configuration file.
+You can also change what words and symbols are used between multiple destination currencies and between the source and destination.
 
-This means that all of the following are allowed:
+### Aliases
 
-- 5 usd in inr,JPY
-- EUR to JPY
-- 10 brl,usd:EUR,gbp
+By default, the plugin operates only on [ISO currency codes](https://pt.wikipedia.org/wiki/ISO_4217) (and a few others).
+However, there is support for *aliases*, which are alternative names for currencies.
+In the configuration file, the user can specify as many aliases as they desire for any currency (for instance, `dollar` and `dollars` for USD).
+Aliases, just like regular currency codes, are case-insensitive (i.e. `EuR`, `EUR` and `eur` are all treated the same).
+
+
+### Math
+
+The available mathematical operations are addition (`+`), subtraction (`-`), multiplication (`*`), division (`/`) and exponentiation (`**` or `^`).
+You can also use parentheses and the negative operator (`-(3 + 4) * 4`, for example).
+
+### Grammar
+
+For those familiar with BNF grammars and regex, below is grammar accepted by the parser (`prog` is the top-level expression):
+
+```
+prog := sources (to_key destinations)? extra?
+
+to_key := 'to' | 'in' | ':'
+
+destinations := cur_code sep destinations | cur_code
+
+sep := ',' | '&' | 'and'
+cur_code := ([^0-9\s+-/*^()]+)
+  # excluding any words that are used as 'sep' or 'to_key'
+
+extra := ('+' | '-' | '*' | '/' | '**' | '^' ) expr
+
+sources := source ('+' | '-')? sources | source
+source := '(' source ')'
+      | cur_code expr
+      | expr (cur_code?)
+
+expr := add_expr
+add_expr := mult_expr | add_expr ('+' | '-') mult_expr
+mult_expr := exp_expr | mult_expr ('*' | '/') exp_expr
+exp_expr := unary_expr | exp_expr ('^' | '**') unary_expr
+unary_expr := operand | ('-' | '+') unary_expr
+operand := number | '(' expr ')'
+
+number := (0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?
+```
 
 ## Change Log
+
+### v2.0
+
+* Improved parser. More flexible, and now you can specify your own separators in the config file
+* Math! Add, subtract, multiply, or divide numbers to obtain the source amount for a currency (also supports parentheses and exponents)
+* Multiple source currencies. Add or subtract amounts in different currencies to obtain a final result
+* An icon
+* Support for aliases. The user can create aliases ('nicknames') for any valid currency in the config file
+
 
 ### v1.4
 

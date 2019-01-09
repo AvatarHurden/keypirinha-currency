@@ -10,9 +10,9 @@ import operator
 # destinations := cur_code sep destinations | cur_code
 #
 # sep := ',' | '&' | 'and'
-# cur_code := ([^0-9\s+-/*^()]+,&:)\b(?<!to|in|:)
+# cur_code := ([^0-9\s+-/*^()]+)\b(?<!to|in|:)
 #
-# extra := ('+' | '-') expr
+# extra := ('+' | '-' | '*' | '/' | '**' | '^' ) expr
 #
 # sources := source ('+' | '-')? sources | source
 # source := '(' source ')'
@@ -150,11 +150,12 @@ def make_parser(properties):
     def source():
         amount_first = seq(expression, code.optional())
         curr_first = seq(code, expression.optional()).map(lambda a: a[::-1])
-        amount, currency = yield alt(amount_first, curr_first, lparen >> source << rparen)
-        return {
-            'amount': amount,
-            'currency': currency
-        }
+        pure = (amount_first | curr_first).map(lambda a: {
+            'amount': a[0],
+            'currency': a[1]
+        })
+        ret = yield pure | lparen >> source << rparen
+        return ret
 
     @generate
     def sources():
@@ -173,21 +174,32 @@ def make_parser(properties):
 
     @generate
     def extra():
-        op = yield s('+') | s('-')
+        operations = {'+': operator.add,
+                      '-': operator.sub,
+                      '**': operator.pow,
+                      '*': operator.mul,
+                      '/': operator.truediv,
+                      '^': operator.pow}
+        op = yield alt(*[s(k).result(v) for (k, v) in operations.items()])
         expr = yield expression
-        if op == '-':
-            expr = -expr
-        return expr
+        return {
+            'operation': op,
+            'value': expr
+        }
 
     @generate
     def parser():
         source = yield sources
         destination = yield (to_parser() >> destinations).optional()
         extras = yield extra.optional()
+        if extras:
+            op = extras['operation']
+            value = extras['value']
+            for s in source:
+                s['amount'] = op(s['amount'], value)
         return {
             'sources': source,
-            'destinations': destination,
-            'extra': extras
+            'destinations': destination
         }
 
     return parser
