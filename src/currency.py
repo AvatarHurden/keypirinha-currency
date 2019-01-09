@@ -314,6 +314,8 @@ class Currency(kp.Plugin):
         dest_separators = dest_seps_string.split()
 
         # aliases
+        self.broker.clear_aliases()
+        
         keys = settings.keys(self.ALIAS_SECTION)
         for key in keys:
             try:

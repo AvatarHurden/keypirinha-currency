@@ -27,6 +27,7 @@ class ExchangeRates():
     last_update = None
     update_freq = None
     _currencies = {}
+    _aliases = {}
 
     in_cur_fallback = 'USD'
     out_cur_fallback = 'EUR, GBP'
@@ -88,7 +89,6 @@ class ExchangeRates():
             self.error = None
             return True
         except Exception as e:
-            print(e)
             self.error = e
             return False
 
@@ -116,20 +116,31 @@ class ExchangeRates():
         if code == 'USD':
             return 1
         else:
-            return self._currencies[code]['price']
+            if code in self._aliases:
+                return self.rate(self._aliases[code])
+            else:
+                return self._currencies[code]['price']
 
     def name(self, code):
-        return self._currencies[code]['name']
+        if code in self._aliases:
+            return self.name(self._aliases[code])
+        else:
+            return self._currencies[code]['name']
 
     def format_codes(self, codeString):
         lst = [x.strip() for x in codeString.split(',')]
         return lst
 
+    def clear_aliases(self):
+        self._aliases.clear()
+
     def validate_alias(self, alias):
         validated = alias.upper()
         if len(validated) < 1:
             return None
-        elif validated in self._currencies.keys():
+        elif validated in self._currencies:
+            return None
+        elif validated in self._aliases:
             return None
         elif re.search('\d', validated):
             return None
@@ -138,14 +149,14 @@ class ExchangeRates():
 
     def add_alias(self, alias, forCurrency):
         validatedCurrency = self.validate_code(forCurrency)
-        self._currencies[alias] = self._currencies[validatedCurrency]
+        self._aliases[alias] = validatedCurrency
 
     def validate_code(self, codeString, raiseOnNone=False):
         if codeString is None:
             if raiseOnNone:
                 raise CurrencyError(None)
             return self.default_cur_in
-        elif codeString.upper() in self._currencies.keys():
+        elif codeString.upper() in self._currencies or codeString.upper() in self._aliases:
             return codeString.upper()
         else:
             raise CurrencyError(codeString)
