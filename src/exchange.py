@@ -4,6 +4,7 @@ from .webservice import OpenExchangeRates, PrivateDomain
 
 import json
 import os
+import re
 
 
 class CurrencyError(RuntimeError):
@@ -11,7 +12,7 @@ class CurrencyError(RuntimeError):
         self.currency = currency
 
     def __str__(self):
-        return 'Unrecognized currency "{}"'.format(self.currency)
+        return 'Unrecognized currency "{}". You can create aliases in the package configuration file.'.format(self.currency)
 
 
 class UpdateFreq(Enum):
@@ -117,13 +118,27 @@ class ExchangeRates():
         else:
             return self._currencies[code]['price']
 
+    def name(self, code):
+        return self._currencies[code]['name']
+
     def format_codes(self, codeString):
         lst = [x.strip() for x in codeString.split(',')]
         return lst
 
-    def validate_codes(self, codeString):
-        lst = self.format_codes(codeString)
-        return [x.upper() for x in lst if x.upper() in self._currencies.keys()]
+    def validate_alias(self, alias):
+        validated = alias.upper()
+        if len(validated) < 1:
+            return None
+        elif validated in self._currencies.keys():
+            return None
+        elif re.search('\d', validated):
+            return None
+        else:
+            return validated
+
+    def add_alias(self, alias, forCurrency):
+        validatedCurrency = self.validate_code(forCurrency)
+        self._currencies[alias] = self._currencies[validatedCurrency]
 
     def validate_code(self, codeString, raiseOnNone=False):
         if codeString is None:
@@ -157,7 +172,7 @@ class ExchangeRates():
                 if amount < 0 or index > 0:
                     srcDescription += ' - ' if amount < 0 else ' + '
                 srcDescription += '{} {}'.format(self.format_number(abs(amount)),
-                                                 sourceCode)
+                                                 self.name(sourceCode))
 
             fullDigits = len(query['sources']) == 1 and \
                 (query['sources'][0]['amount'] or 1) == 1
@@ -166,7 +181,7 @@ class ExchangeRates():
             result = {
                 'amount': total,
                 'description': srcDescription,
-                'title': '{}'.format(formatted_total + ' ' + destinationCode)
+                'title': '{}'.format(formatted_total + ' ' + self.name(destinationCode))
             }
             results.append(result)
         return results
@@ -180,7 +195,7 @@ class ExchangeRates():
             return False
 
     def set_default_curs_out(self, string):
-        lst = [x.strip() for x in string.split(',')]
+        lst = string.split()
         curs = [x.upper() for x in lst if x.upper() in self._currencies.keys()]
         if len(lst) != len(curs):
             return False
