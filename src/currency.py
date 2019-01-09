@@ -2,16 +2,11 @@
 
 import keypirinha as kp
 import keypirinha_util as kpu
-import keypirinha_net as kpnet
 
-from .exchange import ExchangeRates, UpdateFreq
+from .parser import make_parser, ParserProperties
+from .parsy import ParseError
+from .exchange import ExchangeRates, UpdateFreq, CurrencyError
 
-import re
-import json
-import traceback
-import urllib.error
-import urllib.parse
-from html.parser import HTMLParser
 
 class Currency(kp.Plugin):
     """
@@ -48,20 +43,19 @@ class Currency(kp.Plugin):
     ITEMCAT_RESULT = kp.ItemCategory.USER_BASE + 3
 
     DEFAULT_SECTION = 'defaults'
+    ALIAS_SECTION = 'aliases'
 
     DEFAULT_ITEM_ENABLED = True
     DEFAULT_UPDATE_FREQ = 'daily'
     DEFAULT_ALWAYS_EVALUATE = True
     DEFAULT_ITEM_LABEL = 'Convert Currency'
-    DEFAULT_CUR_IN = 'USD'
-    DEFAULT_CUR_OUT = 'EUR, GBP'
+    DEFAULT_SEPARATORS = 'to, in, :'
+    DEFAULT_DESTINATION_SEPARATORS = 'and; &, ,'
 
     default_item_enabled = DEFAULT_ITEM_ENABLED
     update_freq = UpdateFreq(DEFAULT_UPDATE_FREQ)
     always_evaluate = DEFAULT_ALWAYS_EVALUATE
     default_item_label = DEFAULT_ITEM_LABEL
-    default_cur_in = DEFAULT_CUR_IN
-    default_cur_out = DEFAULT_CUR_OUT
 
     ACTION_COPY_RESULT = 'copy_result'
     ACTION_COPY_AMOUNT = 'copy_amount'
@@ -102,18 +96,26 @@ class Currency(kp.Plugin):
         if items_chain and items_chain[-1].category() == self.ITEMCAT_RESULT:
             self.set_suggestions(items_chain, kp.Match.ANY, kp.Sort.NONE)
             return
+        # This is at top level
         if not items_chain or items_chain[-1].category() != self.ITEMCAT_CONVERT:
             if not self.always_evaluate:
                 return
-            query = self._parse_and_merge_input(user_input, True)
-            if 'from_cur' not in query and 'to_cur' not in query:
+            try:
+                query = self._parse_and_merge_input(user_input, True)
+                # This tests whether the user entered enough information to
+                # indicate a currency conversion request.
+                if not self._is_direct_request(query):
+                    return
+                # if the conversion would have failed, return now
+                self.broker.convert(self._parse_and_merge_input(user_input))
+            except Exception as e:
                 return
 
         if self.should_terminate(0.25):
             return
         try:
             query = self._parse_and_merge_input(user_input)
-            if not query['from_cur'] or not query['to_cur'] or not user_input:
+            if query['destinations'] is None or query['sources'] is None:
                 return
 
             if self.broker.tryUpdate():
@@ -124,12 +126,12 @@ class Currency(kp.Plugin):
                     label=user_input,
                     short_desc="Webservice failed ({})".format(self.broker.error)))
             else:
-                results = self.broker.convert(query['amount'], query['from_cur'], query['to_cur'])
+                results = self.broker.convert(query)
 
                 for result in results:
                     suggestions.append(self._create_result_item(
                         label=result['title'],
-                        short_desc= result['source'] + ' to ' + result['destination'],
+                        short_desc=result['description'],
                         target=result['title']
                     ))
         except Exception as exc:
@@ -173,43 +175,37 @@ class Currency(kp.Plugin):
             self._read_config()
             self.on_catalog()
 
+    def _is_direct_request(self, query):
+        entered_dest = ('destinations' in query and
+                        query['destinations'] is not None)
+        entered_source = (query['sources'] is not None and
+                          len(query['sources']) > 0 and
+                          query['sources'][0]['currency'] is not None)
+
+        return entered_dest or entered_source
+
     def _parse_and_merge_input(self, user_input=None, empty=False):
         if empty:
             query = {}
         else:
             query = {
-                'from_cur': self.default_cur_in,
-                'to_cur': self.default_cur_out,
-                'amount': 1
+                'sources': [{'currency': self.broker.default_cur_in, 'amount': 1.0}],
+                'destinations': [{'currency': cur} for cur in self.broker.default_curs_out],
+                'extra': None
             }
 
-        # parse user input
-        # * supported formats:
-        #     <amount> [[from_cur][( to | in |:)to_cur]]
-        if user_input:
-            user_input = user_input.lstrip()
-            query['terms'] = user_input.rstrip()
+        if not user_input:
+            return query
 
-            symbolRegex = r'[a-zA-Z]{3}(,\s*[a-zA-Z]{3})*'
+        user_input = user_input.lstrip()
 
-            m = re.match(
-                (r"^(?P<amount>\d*([,.]\d+)?)?\s*" +
-                    r"(?P<from_cur>" + symbolRegex + ")?\s*" +
-                    r"(( to | in |:)\s*(?P<to_cur>" + symbolRegex +"))?$"),
-                user_input)
-
-            if m:
-                if m.group('from_cur'):
-                    from_cur = self.broker.validate_codes(m.group('from_cur'))
-                    if from_cur:
-                        query['from_cur'] = from_cur
-                if m.group('to_cur'):
-                    to_cur = self.broker.validate_codes(m.group('to_cur'))
-                    if to_cur:
-                        query['to_cur'] = to_cur
-                if m.group('amount'):
-                    query['amount'] = float(m.group('amount').rstrip().replace(',', '.'))
-        return query
+        try:
+            parsed = self.parser.parse(user_input)
+            if not parsed['destinations'] and 'destinations' in query:
+                parsed['destinations'] = query['destinations']
+            return parsed
+        except ParseError as e:
+            return query
 
     def _update_update_item(self):
         self.merge_catalog([self.create_item(
@@ -228,7 +224,7 @@ class Currency(kp.Plugin):
             else:
                 return ', '.join(lst[:-1]) + ' and ' + lst[-1]
 
-        desc = 'Convert from {} to {}'.format(joinCur(self.default_cur_in), joinCur(self.default_cur_out))
+        desc = 'Convert from {} to {}'.format(self.broker.default_cur_in, joinCur(self.broker.default_curs_out))
 
         return self.create_item(
             category=self.ITEMCAT_CONVERT,
@@ -276,7 +272,7 @@ class Currency(kp.Plugin):
             'update_freq',
             section=self.DEFAULT_SECTION,
             fallback=self.DEFAULT_UPDATE_FREQ,
-            enum = [freq.value for freq in UpdateFreq]
+            enum=[freq.value for freq in UpdateFreq]
         )
         self.update_freq = UpdateFreq(update_freq_string)
 
@@ -287,24 +283,60 @@ class Currency(kp.Plugin):
         input_code = settings.get_stripped(
             "input_cur",
             section=self.DEFAULT_SECTION,
-            fallback=self.DEFAULT_CUR_IN)
-        validated_input_code = self.broker.validate_codes(input_code)
+            fallback=self.broker.in_cur_fallback)
+        validated_input_code = self.broker.set_default_cur_in(input_code)
 
         if not validated_input_code:
-            _warn_cur_code("input_cur", self.DEFAULT_CUR_IN)
-            self.default_cur_in = self.broker.format_codes(self.DEFAULT_CUR_IN)
-        else:
-            self.default_cur_in = validated_input_code
+            _warn_cur_code("input_cur", self.broker.default_cur_in)
 
         # default output currency
         output_code = settings.get_stripped(
             "output_cur",
             section=self.DEFAULT_SECTION,
-            fallback=self.DEFAULT_CUR_OUT)
-        validated_output_code = self.broker.validate_codes(output_code)
+            fallback=self.broker.out_cur_fallback)
+        validated_output_code = self.broker.set_default_curs_out(output_code)
 
         if not validated_output_code:
-            _warn_cur_code("output_cur", self.DEFAULT_CUR_OUT)
-            self.default_cur_out = self.broker.format_codes(self.DEFAULT_CUR_OUT)
-        else:
-            self.default_cur_out = validated_output_code
+            _warn_cur_code("output_cur", self.broker.default_curs_out)
+
+        # separators
+        separators_string = settings.get_stripped(
+            "separators",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_SEPARATORS)
+        separators = separators_string.split()
+
+        # destination_separators
+        dest_seps_string = settings.get_stripped(
+            "destination_separators",
+            section=self.DEFAULT_SECTION,
+            fallback=self.DEFAULT_DESTINATION_SEPARATORS)
+        dest_separators = dest_seps_string.split()
+
+        # aliases
+        self.broker.clear_aliases()
+        
+        keys = settings.keys(self.ALIAS_SECTION)
+        for key in keys:
+            try:
+                validatedKey = self.broker.validate_code(key)
+                aliases = settings.get_stripped(
+                    key,
+                    section=self.ALIAS_SECTION,
+                    fallback=''
+                ).split()
+                for alias in aliases:
+                    validated = self.broker.validate_alias(alias)
+                    if validated:
+                        self.broker.add_alias(validated, validatedKey)
+                    else:
+                        fmt = 'Alias {} is invalid. It will be ignored'
+                        self.warn(fmt.format(alias))
+            except Exception:
+                fmt = 'Key {} is not a valid currency. It will be ignored'
+                self.warn(fmt.format(key))
+
+        properties = ParserProperties()
+        properties.to_keywords = separators
+        properties.sep_keywords = dest_separators
+        self.parser = make_parser(properties)
