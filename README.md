@@ -44,6 +44,15 @@ This means that all of the following are allowed:
 
 ## Change Log
 
+### v2.0
+
+* Improved parser. More flexible, and now you can specify your own separators in the config file
+* Math! Add, subtract, multiply, or divide numbers to obtain the source amount for a currency (also supports parentheses and exponents)
+* Multiple source currencies. Add or subtract amounts in different currencies to obtain a final result
+* An icon
+* Support for aliases. The user can create aliases ('nicknames') for any valid currency in the config file
+
+
 ### v1.4
 
 * Added a layer between clients and OpenExchangeRates to mitigate API usage
