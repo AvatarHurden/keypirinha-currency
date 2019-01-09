@@ -172,7 +172,7 @@ class ExchangeRates():
         results = []
         for destination in query['destinations']:
             destinationCode = self.validate_code(destination['currency'], True)
-            total = query['extra'] if query['extra'] else 0
+            total = 0
             srcDescription = ''
             for index, source in enumerate(query['sources']):
                 sourceCode = self.validate_code(source['currency'])
