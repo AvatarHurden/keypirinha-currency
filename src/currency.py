@@ -240,7 +240,7 @@ class Currency(kp.Plugin):
             label=label,
             short_desc=short_desc,
             target=target,
-            args_hint=kp.ItemArgsHint.REQUIRED,
+            args_hint=kp.ItemArgsHint.FORBIDDEN,
             hit_hint=kp.ItemHitHint.NOARGS,
             data_bag=label)
 
