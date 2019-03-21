@@ -3,7 +3,7 @@ import operator
 
 # Grammar
 #
-# prog := sources (to_key destinations)? extra?
+# prog := sources (to_key? destinations)? extra?
 #
 # to_key := 'to' | 'in' | ':'
 #
@@ -14,7 +14,7 @@ import operator
 #
 # extra := ('+' | '-' | '*' | '/' | '**' | '^' ) expr
 #
-# sources := source ('+' | '-')? sources | source
+# sources := source ('+' | '-') sources | source
 # source := '(' source ')'
 #        | cur_code expr
 #        | expr (cur_code?)
@@ -160,10 +160,19 @@ def make_parser(properties):
     @generate
     def sources():
         first = yield lexeme(source)
-        op = yield (s('+') | s('-')).optional()
-        rest = yield sources.optional()
-        if op == '-' and rest:
-            rest[0]['amount'] *= -1
+
+        @generate
+        def more_sources():
+            op = yield (s('+') | s('-'))
+            rest = yield sources
+            return op, rest
+
+        more = yield more_sources.optional()
+        rest = None
+        if more:
+            op, rest = more
+            if op == '-':
+                rest[0]['amount'] *= -1
         return [first] + (rest if rest else [])
 
     @generate
@@ -190,7 +199,7 @@ def make_parser(properties):
     @generate
     def parser():
         source = yield sources
-        destination = yield (to_parser() >> destinations).optional()
+        destination = yield (to_parser().optional() >> destinations).optional()
         extras = yield extra.optional()
         if extras:
             op = extras['operation']

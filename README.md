@@ -51,7 +51,7 @@ You can also use parentheses and the negative operator (`-(3 + 4) * 4`, for exam
 For those familiar with BNF grammars and regex, below is grammar accepted by the parser (`prog` is the top-level expression):
 
 ```
-prog := sources (to_key destinations)? extra?
+prog := sources (to_key? destinations)? extra?
 
 to_key := 'to' | 'in' | ':'
 
@@ -63,7 +63,7 @@ cur_code := ([^0-9\s+-/*^()]+)
 
 extra := ('+' | '-' | '*' | '/' | '**' | '^' ) expr
 
-sources := source ('+' | '-')? sources | source
+sources := source ('+' | '-') sources | source
 source := '(' source ')'
       | cur_code expr
       | expr (cur_code?)
@@ -79,6 +79,12 @@ number := (0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?
 ```
 
 ## Change Log
+
+### v2.1
+
+* Improved grammar for more intuitive use
+* Bug fixes
+* Improved options to copy results to clipboard
 
 ### v2.0
 
