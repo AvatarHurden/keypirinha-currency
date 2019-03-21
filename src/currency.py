@@ -49,8 +49,8 @@ class Currency(kp.Plugin):
     DEFAULT_UPDATE_FREQ = 'daily'
     DEFAULT_ALWAYS_EVALUATE = True
     DEFAULT_ITEM_LABEL = 'Convert Currency'
-    DEFAULT_SEPARATORS = 'to, in, :'
-    DEFAULT_DESTINATION_SEPARATORS = 'and; &, ,'
+    DEFAULT_SEPARATORS = 'to in :'
+    DEFAULT_DESTINATION_SEPARATORS = 'and & ,'
 
     default_item_enabled = DEFAULT_ITEM_ENABLED
     update_freq = UpdateFreq(DEFAULT_UPDATE_FREQ)
@@ -315,7 +315,7 @@ class Currency(kp.Plugin):
 
         # aliases
         self.broker.clear_aliases()
-        
+
         keys = settings.keys(self.ALIAS_SECTION)
         for key in keys:
             try:

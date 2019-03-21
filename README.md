@@ -83,6 +83,7 @@ number := (0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?
 ### v2.1
 
 * Improved grammar for more intuitive use
+* Bug fixes
 
 ### v2.0
 
