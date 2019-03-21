@@ -58,6 +58,7 @@ class Currency(kp.Plugin):
     default_item_label = DEFAULT_ITEM_LABEL
 
     ACTION_COPY_RESULT = 'copy_result'
+    ACTION_COPY_EQUATION = 'copy_equation'
     ACTION_COPY_AMOUNT = 'copy_amount'
 
     broker = None
@@ -70,13 +71,17 @@ class Currency(kp.Plugin):
 
         actions = [
             self.create_action(
-                name=self.ACTION_COPY_AMOUNT,
-                label="Copy result",
-                short_desc="Copy the result to clipboard"),
-            self.create_action(
                 name=self.ACTION_COPY_RESULT,
                 label="Copy result with code",
-                short_desc="Copy result (with code) to clipboard")]
+                short_desc="Copy result (with code) to clipboard"),
+            self.create_action(
+                name=self.ACTION_COPY_AMOUNT,
+                label="Copy numerical result",
+                short_desc="Copy numerical result to clipboard"),
+            self.create_action(
+                name=self.ACTION_COPY_EQUATION,
+                label="Copy conversion",
+                short_desc="Copy conversion equation to clipboard")]
 
         self.set_actions(self.ITEMCAT_RESULT, actions)
 
@@ -132,7 +137,8 @@ class Currency(kp.Plugin):
                     suggestions.append(self._create_result_item(
                         label=result['title'],
                         short_desc=result['description'],
-                        target=result['title']
+                        target=result['title'],
+                        data_bag=result['description']
                     ))
         except Exception as exc:
             suggestions.append(self.create_error_item(
@@ -156,12 +162,14 @@ class Currency(kp.Plugin):
 
         # browse or copy url
         if action and action.name() == self.ACTION_COPY_AMOUNT:
-            amount = item.data_bag()[:-4]
+            amount = item.label()[:-4]
 
             kpu.set_clipboard(amount)
+        elif action and action.name() == self.ACTION_COPY_EQUATION:
+            kpu.set_clipboard(item.data_bag() + ' = ' + item.label())
         # default action: copy result (ACTION_COPY_RESULT)
         else:
-            kpu.set_clipboard(item.data_bag())
+            kpu.set_clipboard(item.label())
 
     def on_activated(self):
         pass
@@ -234,7 +242,7 @@ class Currency(kp.Plugin):
             args_hint=kp.ItemArgsHint.REQUIRED,
             hit_hint=kp.ItemHitHint.NOARGS)
 
-    def _create_result_item(self, label, short_desc, target):
+    def _create_result_item(self, label, short_desc, target, data_bag):
         return self.create_item(
             category=self.ITEMCAT_RESULT,
             label=label,
@@ -242,7 +250,7 @@ class Currency(kp.Plugin):
             target=target,
             args_hint=kp.ItemArgsHint.FORBIDDEN,
             hit_hint=kp.ItemHitHint.NOARGS,
-            data_bag=label)
+            data_bag=data_bag)
 
     def _read_config(self):
         def _warn_cur_code(name, fallback):

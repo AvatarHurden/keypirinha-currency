@@ -84,6 +84,7 @@ number := (0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?
 
 * Improved grammar for more intuitive use
 * Bug fixes
+* Improved options to copy results to clipboard
 
 ### v2.0
 
