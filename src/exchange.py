@@ -37,10 +37,10 @@ class ExchangeRates():
 
     error = None
 
-    def __init__(self, path, update_freq, plugin):
+    def __init__(self, path, update_freq, app_id, plugin):
         self.plugin = plugin
         self.cheap_service = PrivateDomain(self.plugin)
-        self.expensive_service = OpenExchangeRates(self.plugin)
+        self.expensive_service = OpenExchangeRates(self.plugin, app_id)
         self.update_freq = update_freq
         self._file_path = os.path.join(path, 'rates.json')
 
@@ -77,20 +77,34 @@ class ExchangeRates():
                 self._currencies, update_time = self.cheap_service.load_from_url()
                 self.last_update = datetime.now()
                 time_diff = self.last_update - datetime.fromtimestamp(update_time)
-
-                if (time_diff.total_seconds() > 3600 * 2):
-                    self.plugin.info('cache server is more than 2 hours old. Requesting from main API')
-                    self._currencies, update_time = self.expensive_service.load_from_url()
             except Exception as e:
                 self.plugin.info('cache server has returned error. Requesting from main API')
+                self.plugin.err(e)
+                if not self.has_custom_app_id():
+                    return False
+                self._currencies, update_time = self.expensive_service.load_from_url()
+
+            if (time_diff.total_seconds() > 3600 * 2):
+                self.plugin.info('cache server is more than 2 hours old. Requesting from main API')
+                if not self.has_custom_app_id():
+                    return False
                 self._currencies, update_time = self.expensive_service.load_from_url()
 
             self.save_to_file()
             self.error = None
             return True
         except Exception as e:
+            self.plugin.err(e)
             self.error = e
             return False
+
+    def has_custom_app_id(self):
+        if self.expensive_service.app_id:
+            return True
+        self.plugin.err('No OpenExchangeRates App ID declared in the configuration file.')
+        self.error = Exception('The cache has failed. More information (and a fix) are available in the Currency plugin configuration file.')
+        return False
+
 
     def load_from_file(self):
         with open(self._file_path) as f:

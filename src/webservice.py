@@ -40,10 +40,10 @@ class PrivateDomain():
 class OpenExchangeRates():
 
     url = 'https://openexchangerates.org/api/latest.json'
-    APPID = '462d6b7ade734ce1b59201196765d8d7'
 
-    def __init__(self, plugin):
+    def __init__(self, plugin, app_id):
         self.plugin = plugin
+        self.app_id = app_id
 
     def build_request(self, parameters):
         return self.url + '?' + urllib.parse.urlencode(parameters)
@@ -51,9 +51,8 @@ class OpenExchangeRates():
     def load_from_url(self):
         self.plugin.info("loading from API...")
         opener = kpnet.build_urllib_opener()
-        #opener.addheaders = [("User-agent", "Mozilla/5.0")]
 
-        params = {'app_id': self.APPID,
+        params = {'app_id': self.app_id,
                   'show_alternative': True}
 
         requestURL = self.build_request(params)

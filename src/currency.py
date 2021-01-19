@@ -128,8 +128,8 @@ class Currency(kp.Plugin):
 
             if self.broker.error:
                 suggestions.append(self.create_error_item(
-                    label=user_input,
-                    short_desc="Webservice failed ({})".format(self.broker.error)))
+                    label='Webservice failed',
+                    short_desc='{}'.format(self.broker.error)))
             else:
                 results = self.broker.convert(query)
 
@@ -284,8 +284,14 @@ class Currency(kp.Plugin):
         )
         self.update_freq = UpdateFreq(update_freq_string)
 
+        app_id_key = settings.get_stripped(
+            'app_id',
+            section=self.DEFAULT_SECTION,
+            fallback='',
+        )
+
         path = self.get_package_cache_path(create=True)
-        self.broker = ExchangeRates(path, self.update_freq, self)
+        self.broker = ExchangeRates(path, self.update_freq, app_id_key, self)
 
         # default input currency
         input_code = settings.get_stripped(
