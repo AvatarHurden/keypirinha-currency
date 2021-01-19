@@ -18,7 +18,6 @@ move it to the `InstalledPackage` folder located at:
   final path would look like
   `C:\Users\%USERNAME%\AppData\Roaming\Keypirinha\InstalledPackages`)
 
-
 ## Usage
 
 A `Convert Currency` item is inserted into the catalog.
@@ -78,7 +77,16 @@ operand := number | '(' expr ')'
 number := (0|[1-9][0-9]*)([.,][0-9]+)?([eE][+-]?[0-9]+)?
 ```
 
+## Backend
+
+The Currency plugin uses [OpenExchangeRates](https://openexchangerates.org/) to obtain hourly exchange rates for all currencies. Since this project does not make any money, it is using the free tier, which only allows 1000 requests per month. In order to allow the most number of people to use the plugin without any work, there is a cache layer that reduces the number of requests to the backend. 
+
+If this cache layer fails, however, the plugin quickly runs into this request limit. In order to work around this issue, the plugin allows users to specify their own App ID to use whenever the cache is older than 2 hours. This shouldn't happen often, but is a safeguard in case things go wrong. Users can get a free App ID by creating an account [here](https://openexchangerates.org/signup/free).
+
 ## Change Log
+
+### v2.2
+* Added workaround for situations in which the cache fails.
 
 ### v2.1
 
